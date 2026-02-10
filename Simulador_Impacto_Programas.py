@@ -81,7 +81,7 @@ if aba == "Nova Análise":
     c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
     with c_id1: nome_projeto = st.text_input("Nome do Programa").upper()
     with c_id2: gerente_nome = st.text_input("Gerente do Programa")
-    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Especificações Funcionais", "Infraestrutura", "Versão Produto"])
+    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Especificações Funcionais", " Indisponibilidade Infraestrutura", "Versão Produto"])
 
     with st.expander("👤 2. Lançamento de Recursos", expanded=True):
         c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
@@ -187,6 +187,7 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
 
 
 
