@@ -49,7 +49,7 @@ class ExecutiveReport(FPDF):
         self.set_x(125); self.cell(60, 5, "DIRETOR DE OPERAÇÕES", 0, 1, 'C')
 
 # --- CONFIGURAÇÃO E TEMA ---
-st.set_page_config(page_title="MV Impact Sentinel", layout="wide")
+st.set_page_config(page_title="MV Impact Program", layout="wide")
 conn = init_db()
 sns.set_theme(style="whitegrid")
 
@@ -81,7 +81,7 @@ if aba == "Nova Análise":
     c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
     with c_id1: nome_projeto = st.text_input("Nome do Projeto").upper()
     with c_id2: gerente_nome = st.text_input("Gerente de Projeto")
-    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Alt. Especificações", "Infraestrutura", "Versão Produto"])
+    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Especificações Funcionais", "Infraestrutura", "Versão Produto"])
 
     with st.expander("👤 2. Lançamento de Recursos", expanded=True):
         c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
@@ -187,3 +187,4 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
