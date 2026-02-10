@@ -80,12 +80,12 @@ if aba == "Nova Análise":
     # ... (Mantém o código de input original para brevidade)
     c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
     with c_id1: nome_projeto = st.text_input("Nome do Programa").upper()
-    with c_id2: gerente_nome = st.text_input("Gerente de Projeto")
-    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Alt. Especificações", "Infraestrutura", "Versão Produto"])
+    with c_id2: gerente_nome = st.text_input("Gerente do Programa")
+    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Especificações Funcionais", "Infraestrutura", "Versão Produto"])
 
     with st.expander("👤 2. Lançamento de Recursos", expanded=True):
         c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
-        with c1: rec_nome = st.text_input("Recurso")
+        with c1: rec_nome = st.text_input("Nome do Recurso")
         with c2: cat_prof = st.selectbox("Perfil", ["Consultor", "Analista", "Dev", "Gerente"])
         with c3: v_h = st.number_input("R$/Hora", value=150.0)
         with c4: hrs = st.number_input("Horas", min_value=1)
@@ -187,4 +187,5 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
 
