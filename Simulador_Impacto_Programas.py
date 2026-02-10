@@ -58,3 +58,107 @@ st.markdown(f"""
     <style>
     .stApp {{ background-color: {BG_DARK}; color: white; }}
     /* Melhorando a cor dos textos das métricas e descrições */
+    .stMarkdown p, .stMarkdown li, .stMarkdown h3, .stMarkdown h2 {{
+        color: #FFFFFF !important;
+        font-weight: 400;
+    }}
+    .metric-card {{ 
+        background-color: #1A1C24; padding: 20px; border-radius: 12px; 
+        border: 1px solid #30363D; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }}
+    .infographic-title {{ 
+        color: {CYAN_ACCESSIBLE}; font-weight: 800; border-bottom: 3px solid {ORANGE_ACCESSIBLE}; 
+        padding-bottom: 15px; margin-bottom: 25px; font-size: 28px;
+    }}
+    /* Cor das tabelas para leitura */
+    .stTable {{ background-color: #1A1C24; color: white !important; }}
+    </style>
+    """, unsafe_allow_html=True)
+
+st.sidebar.title("🛡️ MV Sentinel Pro")
+aba = st.sidebar.radio("Navegação", ["Nova Análise", "Consultar Histórico"])
+
+if aba == "Nova Análise":
+    st.markdown("<h2 class='infographic-title'>📌 Definição do Escopo</h2>", unsafe_allow_html=True)
+    c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
+    with c_id1: nome_projeto = st.selectbox("Selecione o Programa", ["CEMA", "EINSTEIN", "GIRASSOL", "OUTROS"])
+    with c_id2: gerente_nome = st.text_input("Gerente de Projeto")
+    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Alt. Especificações", "Infraestrutura", "Versão Produto"])
+
+    with st.expander("👤 2. Lançamento de Nome do Recurso", expanded=True):
+        c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
+        with c1: rec_nome = st.text_input("Nome do Recurso")
+        with c2: cat_prof = st.selectbox("Perfil", ["Consultor", "Analista", "Dev", "Gerente"])
+        with c3: v_h = st.number_input("R$/Hora", value=150.0)
+        with c4: hrs = st.number_input("Horas", min_value=1)
+        if st.button("💾 Gravar Recurso"):
+            conn.cursor().execute('''INSERT INTO recursos_projeto (projeto, gerente, recurso, categoria, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?,?)''', 
+            (nome_projeto, gerente_nome, rec_nome, cat_prof, v_h, hrs, v_h*hrs, datetime.now().isoformat()))
+            conn.commit(); st.success("Registrado com sucesso!")
+
+    # Tabela com cores forçadas para leitura
+    df_db = pd.read_sql_query(f"SELECT recurso, categoria, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
+    if not df_db.empty:
+        st.write("### Itens Lançados")
+        st.dataframe(df_db.style.set_properties(**{'background-color': '#1A1C24', 'color': 'white'}))
+        total_extra = df_db['subtotal'].sum()
+    else: total_extra = 0.0
+
+    st.markdown(f"### 💰 3. Simulação Financeira")
+    f1, f2, f3 = st.columns(3)
+    with f1: v_proj = st.number_input("Valor Contrato (R$)", value=1000000.0)
+    with f2: m_orig = st.slider("Margem Original (%)", 0.0, 100.0, 30.0)
+    with f3: parecer = st.text_area("Justificativa Técnica (Parecer)")
+
+    lucro_orig = v_proj * (m_orig / 100)
+    v_final = v_proj + total_extra
+    novo_lucro = lucro_orig - total_extra
+    n_margem = (novo_lucro / v_proj) * 100 if v_proj > 0 else 0
+
+    if st.button("🚀 Protocolar Parecer Final"):
+        conn.cursor().execute('''INSERT INTO historico_pareceres (projeto, gerente, justificativa_cat, valor_projeto, margem_original, impacto_financeiro, parecer_texto, data_emissao) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (nome_projeto, gerente_nome, just_cat, v_proj, m_orig, total_extra, parecer, datetime.now().isoformat()))
+        conn.commit(); st.balloons()
+
+else:
+    st.markdown("<h1 class='infographic-title'>📚 Intelligence Hub: Histórico</h1>", unsafe_allow_html=True)
+    
+    search_query = st.text_input("🔍 Pesquisar Programa ou Gerente:", "").upper()
+    df_hist = pd.read_sql_query("SELECT * FROM historico_pareceres ORDER BY data_emissao DESC", conn)
+    
+    if search_query:
+        df_hist = df_hist[df_hist['projeto'].str.contains(search_query) | df_hist['gerente'].str.upper().contains(search_query)]
+
+    for index, row in df_hist.iterrows():
+        # Label do expander com alto contraste
+        expander_label = f"PROG: {row['projeto']} | DATA: {row['data_emissao'][:10]} | IMPACTO: R$ {row['impacto_financeiro']:,.2f}"
+        with st.expander(expander_label):
+            m1, m2, m3, m4 = st.columns(4)
+            with m1: st.markdown(f"<div class='metric-card'><b>Valor Original</b><br><span style='color:{CYAN_ACCESSIBLE}; font-size:18px; font-weight:bold'>R$ {row['valor_projeto']:,.0f}</span></div>", unsafe_allow_html=True)
+            with m2: st.markdown(f"<div class='metric-card'><b>Erosão Nominal</b><br><span style='color:{ORANGE_ACCESSIBLE}; font-size:18px; font-weight:bold'>R$ {row['impacto_financeiro']:,.0f}</span></div>", unsafe_allow_html=True)
+            
+            lucro_p = (row['valor_projeto']*(row['margem_original']/100))
+            nova_m = (lucro_p - row['impacto_financeiro']) / row['valor_projeto'] * 100
+            
+            with m3: st.markdown(f"<div class='metric-card'><b>M. Original</b><br><span style='font-size:18px; font-weight:bold'>{row['margem_original']}%</span></div>", unsafe_allow_html=True)
+            with m4: st.markdown(f"<div class='metric-card'><b>M. Final</b><br><span style='color:{CYAN_ACCESSIBLE if nova_m > 15 else ORANGE_ACCESSIBLE}; font-size:18px; font-weight:bold'>{nova_m:.2f}%</span></div>", unsafe_allow_html=True)
+
+            # Gráfico com fundo claro para leitura perfeita
+            fig_h, ax_h = plt.subplots(figsize=(7, 4))
+            l_orig = row['valor_projeto'] * (row['margem_original']/100)
+            l_novo = l_orig - row['impacto_financeiro']
+            
+            bars = sns.barplot(x=['Planejado', 'Impactado'], y=[l_orig, l_novo], palette=[CYAN_ACCESSIBLE, ORANGE_ACCESSIBLE], ax=ax_h)
+            for p in ax_h.patches:
+                ax_h.annotate(f'R$ {p.get_height():,.0f}', (p.get_x() + p.get_width() / 2., p.get_height()), 
+                              ha='center', va='bottom', color='black', fontweight='bold', fontsize=10, xytext=(0, 5), textcoords='offset points')
+            
+            ax_h.set_title("Erosão de Lucratividade (R$)", color='black', fontweight='bold')
+            st.pyplot(fig_h)
+            
+            st.markdown(f"**Justificativa:** {row['justificativa_cat']}")
+            st.write(row['parecer_texto'])
+
+            if st.button(f"📥 Baixar Parecer: {row['projeto']}", key=f"pdf_{row['id']}"):
+                # Código de geração de PDF idêntico ao anterior
+                st.info("Gerando PDF...")
