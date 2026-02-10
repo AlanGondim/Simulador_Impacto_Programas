@@ -79,7 +79,7 @@ if aba == "Nova Análise":
     st.subheader("📌 1. Identificação do Projeto")
     # ... (Mantém o código de input original para brevidade)
     c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
-    with c_id1: nome_projeto = st.text_input("Nome do Projeto").upper()
+    with c_id1: nome_projeto = st.text_input("Nome do Programa").upper()
     with c_id2: gerente_nome = st.text_input("Gerente de Projeto")
     with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Alt. Especificações", "Infraestrutura", "Versão Produto"])
 
@@ -187,3 +187,4 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
