@@ -72,7 +72,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.sidebar.title("🛡️ MV Sentinel Pro")
+st.sidebar.title("🛡️ MV Impact Program")
 aba = st.sidebar.radio("Navegação", ["Nova Análise", "Consultar Histórico"])
 
 if aba == "Nova Análise":
@@ -187,6 +187,7 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
 
 
 
