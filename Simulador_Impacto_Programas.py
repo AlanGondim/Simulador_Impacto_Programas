@@ -67,7 +67,7 @@ class ExecutiveReport(FPDF):
         self.set_text_color(0)
 
 # --- INICIALIZAÇÃO ---
-st.set_page_config(page_title="MV Simulador de Impacto em Programas Pro", layout="wide")
+st.set_page_config(page_title="MV Simulador Impacto Pro", layout="wide")
 conn = init_db()
 sns.set_theme(style="whitegrid")
 
@@ -197,4 +197,5 @@ else:
     st.subheader("📚 Histórico de Auditorias")
     df_hist = pd.read_sql_query("SELECT * FROM historico_pareceres ORDER BY data_emissao DESC", conn)
     st.dataframe(df_hist, use_container_width=True)
+
 
