@@ -49,7 +49,7 @@ class ExecutiveReport(FPDF):
         self.set_x(125); self.cell(60, 5, "DIRETOR DE OPERAÇÕES", 0, 1, 'C')
 
 # --- CONFIGURAÇÃO E TEMA ---
-st.set_page_config(page_title="MV Impact Sentinel", layout="wide")
+st.set_page_config(page_title="MV Impact Program", layout="wide")
 conn = init_db()
 sns.set_theme(style="whitegrid")
 
@@ -187,5 +187,6 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
 
 
