@@ -108,7 +108,7 @@ if aba == "Nova Análise":
     st.subheader("👥 Lançamento de Esforço Adicional")
     with st.form("form_rec", clear_on_submit=True):
         cl1, cl2, cl3 = st.columns([3, 1, 1])
-        with cl1: r_nome = st.text_input("Nome do Recurso / Atividade")
+        with cl1: r_nome = st.text_input("Nome do Recurso")
         with cl2: r_vh = st.number_input("Custo R$/Hora", value=150.0)
         with cl3: r_hr = st.number_input("Horas", min_value=1)
         if st.form_submit_button("➕ Inserir Linha"):
@@ -221,4 +221,5 @@ else:
                 
                 pdf.footer_signatures()
                 st.download_button("Salvar Arquivo", bytes(pdf.output(dest='S')), f"DOSSIE_EXECUTIVO_{row['projeto']}.pdf")
+
 
