@@ -97,7 +97,7 @@ if aba == "Nova Análise":
     # 1. IDENTIFICAÇÃO
     c1, c2 = st.columns(2)
     with c1:
-        lista_progs = ["INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "GOOD HOPE", "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
+        lista_progs = [" ", "INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "GOOD HOPE", "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
         nome_prog = st.selectbox("Selecione o Programa", lista_progs)
         v_contrato = st.number_input("Valor Original do Contrato (R$)", value=100000.0)
     with c2:
@@ -221,3 +221,4 @@ else:
                 
                 pdf.footer_signatures()
                 st.download_button("Salvar Arquivo", bytes(pdf.output(dest='S')), f"DOSSIE_EXECUTIVO_{row['projeto']}.pdf")
+
