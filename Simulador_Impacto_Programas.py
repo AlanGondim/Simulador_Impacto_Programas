@@ -197,7 +197,7 @@ else:
                 angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist(); angles += angles[:1]
                 fig_pdf, ax_pdf = plt.subplots(figsize=(3, 3), subplot_kw=dict(polar=True))
                 ax_pdf.plot(angles, stats, color='yellow', linewidth=2)
-                ax_pdf.fill(angles, stats, color='orange', alpha=0.3, hatch='///')
+                ax_pdf.fill(angles, stats, color='orange', alpha=0.3, hatch=' ')
                 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
                     fig_pdf.savefig(tmp.name, bbox_inches='tight')
@@ -205,4 +205,5 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
