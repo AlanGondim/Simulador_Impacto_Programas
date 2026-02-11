@@ -8,6 +8,11 @@ from datetime import datetime
 import tempfile
 import os
 
+# --- FUNÇÃO DE FORMATAÇÃO BRASILEIRA ---
+def format_moeda(valor):
+    """Converte um float para o formato R$ 1.000.000,00"""
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 # --- MOTOR DE BANCO DE DADOS ---
 def init_db():
     conn = sqlite3.connect('mv_governança_v2.db')
@@ -187,4 +192,5 @@ else:
                         pdf.add_signatures()
                         st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
                         os.remove(tmp_h_img)
+
 
