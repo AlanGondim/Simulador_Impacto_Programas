@@ -3,30 +3,40 @@ import pandas as pd
 import sqlite3
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 from fpdf import FPDF
 from datetime import datetime
 import tempfile
 import os
+import urllib.parse
 
-# --- FUNÇÃO DE FORMATAÇÃO BRASILEIRA ---
+# --- FUNÇÕES DE APOIO ---
 def format_moeda(valor):
-    """Converte um float para o formato R$ 1.000.000,00"""
+    """Formata para o padrão brasileiro R$ 1.000,00"""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- MOTOR DE BANCO DE DADOS ---
+def calcular_pert(o, m, p):
+    """Cálculo PERT: (O + 4M + P) / 6 e Desvio Padrão: (P - O) / 6"""
+    media = (o + 4 * m + p) / 6
+    desvio = (p - o) / 6
+    return media, desvio
+
+# --- BANCO DE DADOS (SCHEMA AMPLIADO) ---
 def init_db():
-    conn = sqlite3.connect('mv_governança_v2.db')
+    conn = sqlite3.connect('mv_governança_v5.db')
     cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, recurso TEXT, 
+    cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto 
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, recurso TEXT, 
         categoria TEXT, custo_hora REAL, horas INTEGER, subtotal REAL, data_registro TEXT)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS historico_pareceres (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, justificativa_cat TEXT, 
-        valor_projeto REAL, margem_original REAL, impacto_financeiro REAL, parecer_texto TEXT, data_emissao TEXT)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS historico_pareceres 
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, justificativa_cat TEXT, 
+        valor_projeto REAL, margem_original REAL, impacto_financeiro REAL, parecer_texto TEXT, 
+        detalhamento TEXT, p_custo_media REAL, p_prazo_media REAL, r_escopo INTEGER, 
+        r_custo REAL, r_prazo INTEGER, data_emissao TEXT)''')
     conn.commit()
     return conn
 
-# --- CLASSE PDF EXECUTIVA OTIMIZADA (PÁGINA ÚNICA) ---
+# --- CLASSE PDF MASTER ---
 class ExecutiveReport(FPDF):
     def __init__(self, projeto, gerente):
         super().__init__()
@@ -34,163 +44,149 @@ class ExecutiveReport(FPDF):
         self.gerente = gerente
 
     def header(self):
-        self.set_fill_color(0, 51, 102)
-        self.rect(0, 0, 210, 30, 'F')
-        self.set_font("Arial", 'B', 14); self.set_text_color(255)
-        self.cell(190, 10, "MV IMPACT PROGRAM - PARECER TÉCNICO", ln=True, align='C')
-        self.set_font("Arial", '', 8); self.cell(190, 5, f"Projeto: {self.projeto} | Responsável: {self.gerente}", ln=True, align='C')
-        self.ln(5)
+        self.set_fill_color(0, 51, 102) # Azul Marinho MV
+        self.rect(0, 0, 210, 35, 'F')
+        self.set_font("Arial", 'B', 15); self.set_text_color(255)
+        self.cell(190, 10, "MV PORTFOLIO INTELLIGENCE - DOSSIÊ DE RISCO PRO", ln=True, align='C')
+        self.set_font("Arial", '', 9)
+        self.cell(190, 5, f"Programa: {self.projeto} | Gerente do Programa: {self.gerente}", ln=True, align='C')
+        self.ln(20)
 
-    def watermark(self):
-        self.set_font("Arial", 'B', 45); self.set_text_color(245, 245, 245)
-        with self.rotation(45, 100, 150): self.text(45, 190, "CONFIDENCIAL")
-        self.set_text_color(0)
+    def footer_signatures(self):
+        self.set_y(260)
+        self.line(25, self.get_y(), 85, self.get_y())
+        self.line(125, self.get_y(), 185, self.get_y())
+        self.set_font("Arial", 'B', 9); self.set_text_color(0)
+        self.set_x(25); self.cell(60, 5, self.gerente, align='C')
+        self.set_x(125); self.cell(60, 5, "DIRETOR DE OPERAÇÕES", align='C')
 
-    def add_signatures(self):
-        self.set_y(250); curr_y = self.get_y()
-        self.line(25, curr_y + 10, 85, curr_y + 10); self.line(125, curr_y + 10, 185, curr_y + 10)
-        self.set_font("Arial", 'B', 9); self.set_y(curr_y + 12)
-        self.set_x(25); self.cell(60, 5, self.gerente, 0, 0, 'C')
-        self.set_x(125); self.cell(60, 5, "DIRETOR DE OPERAÇÕES", 0, 1, 'C')
-
-# --- CONFIGURAÇÃO E TEMA ---
-st.set_page_config(page_title="MV Impact Program", layout="wide")
+# --- CONFIGURAÇÃO STREAMLIT ---
+st.set_page_config(page_title="Simulador Impact Programa PRO", layout="wide")
 conn = init_db()
 sns.set_theme(style="whitegrid")
 
-# CSS para Estilo NotebookLM
-st.markdown("""
-    <style>
-    .metric-card {
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #003366;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-    }
-    .infographic-title {
-        color: #003366;
-        font-weight: bold;
-        border-bottom: 2px solid #003366;
-        padding-bottom: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.sidebar.title("🛡️ MV Sentinel Pro")
-aba = st.sidebar.radio("Navegação", ["Nova Análise", "Consultar Histórico"])
+st.sidebar.title("🛡️ Sentinel PRO V5")
+aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"])
 
 if aba == "Nova Análise":
-    st.subheader("📌 1. Identificação do Projeto")
-    # ... (Mantém o código de input original para brevidade)
-    c_id1, c_id2, c_id3 = st.columns([2, 2, 1])
-    with c_id1: nome_projeto = st.text_input("Nome do Projeto").upper()
-    with c_id2: gerente_nome = st.text_input("Gerente de Projeto")
-    with c_id3: just_cat = st.selectbox("Categoria", ["Mudança Go Live", "Retreinamento", "Especificações Funcionais", "Indisponibilidade Infraestrutura", "Versão Produto"])
+    st.markdown("<h2 style='color: #003366;'>📋 Registro e Simulação de Impacto</h2>", unsafe_allow_html=True)
+    
+    # 1. IDENTIFICAÇÃO DO PROGRAMA
+    c1, c2 = st.columns([2, 2])
+    with c1: 
+        prog_list = ["INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", 
+                     "GUATEMALA", "GOOD HOPE", "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
+        nome_projeto = st.selectbox("Selecione o Programa", prog_list)
+    with c2: 
+        gerente_nome = st.text_input("Gerente do Programa")
+    
+    just_cats = st.multiselect("Justificativas do Desvio (Múltipla Seleção)", 
+                               ["Mudança de Go Live", "Retreinamento", "Alteração Especificações Funcionais", 
+                                "Infraestrutura", "Versão Produto", "Erro de Estimativa"])
 
-    with st.expander("👤 2. Lançamento de Recursos", expanded=True):
-        c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
-        with c1: rec_nome = st.text_input("Recurso")
-        with c2: cat_prof = st.selectbox("Perfil", ["Consultor", "Analista", "Dev", "Gerente"])
-        with c3: v_h = st.number_input("R$/Hora", value=150.0)
-        with c4: hrs = st.number_input("Horas", min_value=1)
-        if st.button("💾 Gravar Recurso"):
-            if nome_projeto and rec_nome:
-                conn.cursor().execute('''INSERT INTO recursos_projeto (projeto, gerente, recurso, categoria, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?,?)''', 
-                (nome_projeto, gerente_nome, rec_nome, cat_prof, v_h, hrs, v_h*hrs, datetime.now().isoformat()))
-                conn.commit(); st.success("Gravado!")
+    # 2. LANÇAMENTO DINÂMICO
+    st.subheader("👥 Alocação de Esforço em Tempo Real")
+    with st.form("form_rec", clear_on_submit=True):
+        col_rec, col_per, col_vh, col_h = st.columns([3, 2, 1, 1])
+        with col_rec: r_nome = st.text_input("Nome do Recurso")
+        with col_per: r_perfil = st.selectbox("Perfil", ["Consultor", "Analista", "Dev", "Gerente"])
+        with col_vh: r_vh = st.number_input("R$/Hora", value=150.0)
+        with col_h: r_hrs = st.number_input("Horas", min_value=1)
+        if st.form_submit_button("➕ Inserir Linha"):
+            if nome_projeto and r_nome:
+                conn.cursor().execute("INSERT INTO recursos_projeto (projeto, gerente, recurso, categoria, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?,?)",
+                                       (nome_projeto, gerente_nome, r_nome, r_perfil, r_vh, r_hrs, r_vh*r_hrs, datetime.now().isoformat()))
+                conn.commit()
 
-    df_db = pd.read_sql_query(f"SELECT recurso, categoria, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
+    df_db = pd.read_sql_query(f"SELECT recurso, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
     if not df_db.empty:
-        st.table(df_db)
+        st.table(df_db.assign(subtotal=df_db['subtotal'].apply(format_moeda)))
         total_extra = df_db['subtotal'].sum()
     else: total_extra = 0.0
 
-    st.markdown("### 💰 3. Simulação Financeira")
-    f1, f2, f3 = st.columns(3)
-    with f1: v_proj = st.number_input("Valor Contrato (R$)", value=1000000.0)
-    with f2: m_orig = st.slider("Margem Original (%)", 0.0, 100.0, 30.0)
-    with f3: parecer = st.text_area("Justificativa")
+    # 3. MODELAGEM PERT (CUSTO E PRAZO)
+    st.markdown("---")
+    st.subheader("🎲 Modelagem de Incerteza (Análise PERT)")
+    
+    col_pc1, col_pc2 = st.columns(2)
+    with col_pc1:
+        st.caption("Cenários de Custo (Financeiro)")
+        c_o = st.number_input("Otimista (R$)", value=total_extra * 0.9, key="co")
+        c_m = st.number_input("Provável (R$)", value=total_extra, key="cm")
+        c_p = st.number_input("Pessimista (R$)", value=total_extra * 1.4, key="cp")
+        media_c, d_c = calcular_pert(c_o, c_m, c_p)
+    
+    with col_pc2:
+        st.caption("Cenários de Prazo (Dias Adicionais)")
+        d_o = st.number_input("Otimista (Dias)", value=5, key="do")
+        d_m = st.number_input("Provável (Dias)", value=10, key="dm")
+        d_p = st.number_input("Pessimista (Dias)", value=25, key="dp")
+        media_d, d_d = calcular_pert(d_o, d_m, d_p)
+    
+    st.info(f"💡 **Expectativa PERT:** Custo Médio {format_moeda(media_c)} | Atraso Médio: {media_d:.1f} dias.")
 
-    lucro_orig = v_proj * (m_orig / 100)
-    v_final = v_proj + total_extra
-    novo_lucro = lucro_orig - total_extra
-    n_margem = (novo_lucro / v_proj) * 100 if v_proj > 0 else 0
+    # 4. RADAR CHART (TRIÂNGULO DE FERRO)
+    st.subheader("📐 Impacto nas Restrições")
+    r_esc = st.slider("Impacto em Escopo (1-10)", 1, 10, 5)
+    r_pra = st.slider("Impacto em Prazo (1-10)", 1, 10, 5)
+    r_cus = (total_extra / 50000) * 10 # Normalização
+    
+    # Criando gráfico menor e amarelo
+    categories = ['Escopo', 'Custo', 'Prazo']
+    values = [r_esc, r_cus, r_pra]
+    values += values[:1]
+    angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+    angles += angles[:1]
 
-    if st.button("🚀 Finalizar e Protocolar Parecer"):
-        conn.cursor().execute('''INSERT INTO historico_pareceres (projeto, gerente, justificativa_cat, valor_projeto, margem_original, impacto_financeiro, parecer_texto, data_emissao) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                                (nome_projeto, gerente_nome, just_cat, v_proj, m_orig, total_extra, parecer, datetime.now().isoformat()))
-        conn.commit(); st.success("Parecer arquivado com sucesso no histórico!")
+    fig_radar, ax = plt.subplots(figsize=(3, 3), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, color='yellow', linewidth=2)
+    ax.fill(angles, values, color='orange', alpha=0.3, hatch='///')
+    ax.set_yticklabels([])
+    plt.xticks(angles[:-1], categories, color='grey', size=8)
+    st.pyplot(fig_radar)
 
-# --- ABA DE HISTÓRICO COM INTERFACE INFOGRÁFICA (NotebookLM Style) ---
+    # 5. JUSTIFICATIVA E PARECER
+    st.subheader("📝 Detalhamento das Justificativas")
+    desc_detalhada = st.text_area("Descreva tecnicamente as causas e o plano de mitigação para aprovação:")
+
+    if st.button("🚀 Protocolar Dossiê Final"):
+        conn.cursor().execute('''INSERT INTO historico_pareceres 
+            (projeto, gerente, justificativa_cat, valor_projeto, margem_original, impacto_financeiro, 
+             parecer_texto, detalhamento, p_custo_media, p_prazo_media, r_escopo, r_custo, r_prazo, data_emissao) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', 
+            (nome_projeto, gerente_nome, ", ".join(just_cats), 1000000.0, 35.0, total_extra, 
+             "Parecer Gerencial", desc_detalhada, media_c, media_d, r_esc, r_cus, r_pra, datetime.now().isoformat()))
+        conn.commit(); st.balloons()
+
+# --- HUB DE INTELIGÊNCIA (INTERATIVO) ---
 else:
-    st.markdown("<h1 class='infographic-title'>📚 Intelligence Hub: Histórico de Auditorias</h1>", unsafe_allow_html=True)
+    st.header("📚 Intelligence Hub: Histórico de Pareceres")
+    df_h = pd.read_sql_query("SELECT * FROM historico_pareceres ORDER BY data_emissao DESC", conn)
     
-    df_hist = pd.read_sql_query("SELECT * FROM historico_pareceres ORDER BY data_emissao DESC", conn)
-    
-    if df_hist.empty:
-        st.info("Nenhum parecer protocolado.")
-    else:
-        for index, row in df_hist.iterrows():
-            # Título do Card Expansível
-            expander_label = f"📄 {row['data_emissao'][:10]} | {row['projeto']} | Gerente: {row['gerente']} | Impacto: R$ {row['impacto_financeiro']:,.2f}"
+    for i, row in df_h.iterrows():
+        with st.expander(f"📄 {row['data_emissao'][:10]} | PROG: {row['projeto']} | Impacto: {format_moeda(row['impacto_financeiro'])}"):
+            st.write(f"**Gerente do Programa:** {row['gerente']}")
+            st.write(f"**Causas:** {row['justificativa_cat']}")
             
-            with st.expander(expander_label):
-                # Layout Estilo Infográfico
-                st.markdown(f"### 📊 Insight do Projeto: {row['projeto']}")
-                
-                # Colunas de métricas NotebookLM
-                m1, m2, m3, m4 = st.columns(4)
-                with m1:
-                    st.markdown(f"<div class='metric-card'><b>Valor Projeto</b><br><span style='font-size:20px'>R$ {row['valor_projeto']:,.2f}</span></div>", unsafe_allow_html=True)
-                with m2:
-                    st.markdown(f"<div class='metric-card'><b>Erosão Nominal</b><br><span style='font-size:20px; color:#B22222'>R$ {row['impacto_financeiro']:,.2f}</span></div>", unsafe_allow_html=True)
-                with m3:
-                    st.markdown(f"<div class='metric-card'><b>Margem Original</b><br><span style='font-size:20px'>{row['margem_original']}%</span></div>", unsafe_allow_html=True)
-                with m4:
-                    nova_m = ((row['valor_projeto']*(row['margem_original']/100)) - row['impacto_financeiro']) / row['valor_projeto'] * 100
-                    st.markdown(f"<div class='metric-card'><b>Nova Margem</b><br><span style='font-size:20px; color:{'red' if nova_m < 10 else 'green'}'>{nova_m:.2f}%</span></div>", unsafe_allow_html=True)
+            # Resumo PERT
+            c1, c2 = st.columns(2)
+            c1.metric("Média PERT Custo", format_moeda(row['p_custo_media']))
+            c2.metric("Média PERT Prazo", f"{row['p_prazo_media']:.1f} dias")
+            
+            st.info(f"**Detalhamento:** {row['detalhamento']}")
 
-                # Gráfico e Justificativa lado a lado
-                st.ln = 5
-                col_graph, col_txt = st.columns([1.5, 1])
+            if st.button(f"📥 Gerar PDF do Dossiê", key=f"pdf_{row['id']}"):
+                pdf = ExecutiveReport(row['projeto'], row['gerente'])
+                pdf.add_page()
                 
-                with col_graph:
-                    # Gerar gráfico específico para esta linha
-                    fig_h, ax_h = plt.subplots(figsize=(7, 4))
-                    l_orig = row['valor_projeto'] * (row['margem_original']/100)
-                    l_novo = l_orig - row['impacto_financeiro']
-                    sns.barplot(x=['Lucro Original', 'Lucro Real'], y=[l_orig, l_novo], palette=['#003366', '#B22222'], ax=ax_h)
-                    ax_h.set_title("Erosão de Lucratividade")
-                    st.pyplot(fig_h)
+                pdf.set_font("Arial", 'B', 12); pdf.set_fill_color(240); pdf.cell(190, 10, " 1. RESUMO E JUSTIFICATIVAS", ln=True, fill=True)
+                pdf.set_font("Arial", '', 10)
+                pdf.multi_cell(190, 7, f"O programa {row['projeto']} sofreu impacto nominal de {format_moeda(row['impacto_financeiro'])}.\nJustificativas: {row['justificativa_cat']}.\n\nDetalhamento Tecnico: {row['detalhamento']}")
                 
-                with col_txt:
-                    st.markdown("#### 📝 Justificativa Técnica")
-                    st.info(f"**Categoria:** {row['justificativa_cat']}")
-                    st.write(row['parecer_texto'])
-                    
-                    # Botão para gerar o PDF desta linha específica
-                    if st.button(f"📥 Baixar PDF: {row['projeto']}", key=f"btn_{row['id']}"):
-                        pdf = ExecutiveReport(row['projeto'], row['gerente'])
-                        pdf.add_page(); pdf.watermark()
-                        
-                        # Bloco 1: Resumo
-                        pdf.set_font("Arial", 'B', 12); pdf.set_fill_color(240); pdf.cell(190, 8, " 1. RESUMO EXECUTIVO", ln=True, fill=True)
-                        pdf.set_font("Arial", '', 10)
-                        pdf.multi_cell(190, 6, f"Projeto auditado: {row['projeto']}\nJustificativa: {row['justificativa_cat']}\nImpacto Nominal: R$ {row['impacto_financeiro']:,.2f}")
-                        
-                        # Bloco 2: Gráfico (Salvar temporário)
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
-                            fig_h.savefig(tmp_h_img := tmp_img.name, bbox_inches='tight')
-                            pdf.ln(5); pdf.image(tmp_h_img, x=45, w=120)
-                        
-                        # Bloco 3: Parecer
-                        pdf.ln(5); pdf.set_font("Arial", 'B', 12); pdf.cell(190, 8, " 2. PARECER DO GERENTE", ln=True, fill=True)
-                        pdf.set_font("Arial", 'I', 9); pdf.multi_cell(190, 6, row['parecer_texto'], border=1)
-                        
-                        pdf.add_signatures()
-                        st.download_button("Clique aqui para salvar o PDF", bytes(pdf.output(dest='S')), f"PARECER_{row['projeto']}.pdf")
-                        os.remove(tmp_h_img)
-
-
+                pdf.ln(5); pdf.set_font("Arial", 'B', 12); pdf.cell(190, 10, " 2. MODELAGEM ESTATISTICA (PERT)", ln=True, fill=True)
+                pdf.set_font("Arial", '', 10)
+                pdf.cell(190, 7, f"Custo Medio Estimado (Incerteza): {format_moeda(row['p_custo_media'])}", ln=True)
+                pdf.cell(190, 7, f"Prazo Adicional Medio Estimado: {row['p_prazo_media']:.1f} dias", ln=True)
+                
+                pdf.footer_signatures()
+                st.download_button("Clique para salvar o PDF", bytes(pdf.output(dest='S')), f"DOSSIE_{row['projeto']}.pdf")
