@@ -70,7 +70,7 @@ class ExecutiveReport(FPDF):
 st.set_page_config(page_title="Simulador Impacto PRO", layout="wide")
 conn = init_db()
 
-st.sidebar.title("🛡️ MV Impacto Programas PRO")
+st.sidebar.title("🛡️ MV Simulador Impacto Programas PRO")
 aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"])
 
 if aba == "Nova Análise":
@@ -205,5 +205,6 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
