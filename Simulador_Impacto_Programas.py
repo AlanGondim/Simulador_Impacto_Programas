@@ -81,7 +81,7 @@ if aba == "Nova Análise":
     with c1: 
         progs = [" ","INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA","GOOD HOPE" , "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
         nome_projeto = st.selectbox("Selecione o Programa", progs)
-        v_contrato = st.number_input("Valor do Contrato (R$)", value=100000.0, step=1000.0)
+        v_contrato = st.number_input("Valor do Contrato (R$)", value=1000.0, step=1000.0)
     with c2: 
         gerente_nome = st.text_input("Gerente do Programa")
         m_original = st.slider("Margem Original Planejada (%)", 1, 100, 35)
@@ -205,6 +205,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
