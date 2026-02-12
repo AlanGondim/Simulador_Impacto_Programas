@@ -18,7 +18,7 @@ def calcular_pert(o, m, p):
 
 # --- BANCO DE DADOS (V14 - Correção de Schema) ---
 def init_db():
-    conn = sqlite3.connect('mv_governance_v14.db')
+    conn = sqlite3.connect('mv_simulador_impacto_programas.db')
     cursor = conn.cursor()
     # Criar tabelas se não existirem
     cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto 
@@ -63,7 +63,7 @@ class ExecutiveReport(FPDF):
 st.set_page_config(page_title="Simulador Impacto PRO", layout="wide")
 conn = init_db()
 
-st.sidebar.title("🛡️ MV Governança V14")
+st.sidebar.title("🛡️ MV SIMULADOR IMPACTO PROGRAMAS")
 aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"], key="main_nav")
 
 if aba == "Nova Análise":
@@ -156,4 +156,5 @@ else:
                 pdf.multi_cell(190, 7, detalhe_pert)
                 
                 st.download_button("Salvar PDF", bytes(pdf.output(dest='S')), f"DOSSIE_{row['projeto']}.pdf")
+
 
