@@ -85,7 +85,7 @@ if aba == "Nova Análise":
         v_contrato = st.number_input("Valor do Contrato (R$)", value=1000.0, step=1000.0)
     with c2: 
         gerente_nome = st.text_input("Gerente do Programa")
-        m_original = st.slider("Margem Original Planejada (%)", 1, 100, 35)
+        m_original = st.slider("Margem Original Planejada (%)", 0, 100, 35)
         just_cats = st.multiselect("Motivadores do Desvio", ["Mudança de Go Live", "Retreinamento", "Especificações Funcionais","Erro de Escopo", "Infraestrutura", "Versão Produto"])
 
     # 2. LANÇAMENTO DE RECURSOS
@@ -206,6 +206,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
