@@ -11,6 +11,7 @@ import os
 
 # --- FUNÇÕES DE APOIO ---
 def format_moeda(valor):
+    
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def calcular_pert(o, m, p):
@@ -205,6 +206,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
