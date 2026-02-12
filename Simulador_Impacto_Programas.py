@@ -78,8 +78,8 @@ if aba == "Nova Análise":
 
     st.markdown("<h2 style='color: #003366;'>📊 2. ESTRUTURA ATUAL DE CUSTOS</h2>", unsafe_allow_html=True)
     cc1, cc2, cc3 = st.columns(3)
-    with cc1: receita = st.number_input("2.1. Receita Líquida (R$)", min_value=0.0, value=1000.0, format="%.2f")
-    with cc2: custos_at = st.number_input("2.2. Custos totais (R$)", min_value=0.0, value=1000.0, format="%.2f")
+    with cc1: receita = st.number_input("2.1. Receita Líquida (R$)", min_value=0.0, step=1000.0, value=1000.0, format="%.2f")
+    with cc2: custos_at = st.number_input("2.2. Custos totais (R$)", min_value=0.0, step=1000.0, value=1000.0, format="%.2f")
     with cc3:
         m_atual = ((receita - custos_at) / receita * 100) if receita > 0 else 0
         st.metric("2.3. Margem atual", f"{m_atual:.2f}%")
@@ -156,6 +156,7 @@ else:
                 pdf.multi_cell(190, 7, detalhe_pert)
                 
                 st.download_button("Salvar PDF", bytes(pdf.output(dest='S')), f"DOSSIE_{row['projeto']}.pdf")
+
 
 
 
