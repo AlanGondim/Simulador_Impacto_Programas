@@ -45,7 +45,7 @@ class ExecutiveReport(FPDF):
         self.set_fill_color(0, 51, 102) 
         self.rect(0, 0, 210, 45, 'F')
         self.set_font("Arial", 'B', 18); self.set_text_color(255)
-        self.cell(190, 15, "DOSSIÊ DE IMPACTO E GOVERNANÇA ECONÓMICA", ln=True, align='C')
+        self.cell(190, 15, "DOSSIÊ DE IMPACTO E GOVERNANÇA ECONÔMICA", ln=True, align='C')
         self.set_font("Arial", 'B', 10)
         self.cell(190, 5, f"PROGRAMA: {self.projeto} | RESPONSÁVEL: {self.gerente.upper()}", ln=True, align='C')
         self.set_font("Arial", '', 8)
@@ -74,7 +74,7 @@ st.sidebar.title("🛡️ MV Simulador Impacto Programas PRO")
 aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"])
 
 if aba == "Nova Análise":
-    st.markdown("<h2 style='color: #003366;'>📋 Elaboração de Dossiê de Aprovação</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #003366;'>📋 Elaboração de Dossiê de Impacto para Aprovação</h2>", unsafe_allow_html=True)
     
     # 1. IDENTIFICAÇÃO
     c1, c2 = st.columns(2)
@@ -205,6 +205,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
