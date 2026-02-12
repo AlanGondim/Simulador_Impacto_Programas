@@ -70,7 +70,7 @@ if aba == "Nova Análise":
     st.markdown("<h2 style='color: #003366;'>📋 1. INFORMAÇÕES GERAIS DO PROGRAMA</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        progs = ["INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "EINSTEIN"]
+        progs = [" ", "INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "EINSTEIN"]
         nome_projeto = st.selectbox("1.1. Selecione o programa", progs)
     with c2:
         gerente_nome = st.text_input("1.2. Gerente do Programa")
@@ -156,3 +156,4 @@ else:
                 pdf.multi_cell(190, 7, detalhe_pert)
                 
                 st.download_button("Salvar PDF", bytes(pdf.output(dest='S')), f"DOSSIE_{row['projeto']}.pdf")
+
