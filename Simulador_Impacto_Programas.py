@@ -111,7 +111,7 @@ if aba == "Nova Análise":
 
     # Termômetro de Risco Visual
     cor_risco = "green" if erosao_pp < 5 else "orange" if erosao_pp < 15 else "red"
-    st.markdown(f"### 🌡️ Termómetro de Impacto: <span style='color:{cor_risco}'>{erosao_pp:.2f} % de Erosão</span>", unsafe_allow_html=True)
+    st.markdown(f"### 🌡️ Termômetro de Impacto: <span style='color:{cor_risco}'>{erosao_pp:.2f} % de Erosão</span>", unsafe_allow_html=True)
     
     st.table(df_db.assign(subtotal=df_db['subtotal'].apply(format_moeda)))
 
@@ -205,6 +205,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
