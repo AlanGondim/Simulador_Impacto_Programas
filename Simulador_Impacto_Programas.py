@@ -11,215 +11,148 @@ import os
 
 # --- FUNÇÕES DE APOIO ---
 def format_moeda(valor):
-    
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def calcular_pert(o, m, p):
-    media = (o + 4 * m + p) / 6
-    desvio = (p - o) / 6
-    return media, desvio
+    return (o + 4 * m + p) / 6
 
-# --- BANCO DE DADOS (V10 - Consolidada) ---
+# --- BANCO DE DADOS (V14 - Correção de Schema) ---
 def init_db():
-    conn = sqlite3.connect('mv_governança_executiva_v10.db')
+    conn = sqlite3.connect('mv_governance_v14.db')
     cursor = conn.cursor()
+    # Criar tabelas se não existirem
     cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, recurso TEXT, 
-        categoria TEXT, custo_hora REAL, horas INTEGER, subtotal REAL, data_registro TEXT)''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, função TEXT, 
+        senioridade TEXT, custo_hora REAL, horas INTEGER, subtotal REAL, data_registro TEXT)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS historico_pareceres 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, justificativa_cat TEXT, 
-        valor_projeto REAL, margem_original REAL, impacto_financeiro REAL, detalhamento TEXT, 
-        p_custo_media REAL, p_prazo_media REAL, p_prazo_horas REAL, r_escopo INTEGER, 
-        r_custo REAL, r_prazo INTEGER, data_emissao TEXT)''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, justificativa TEXT, 
+        receita REAL, custos_atuais REAL, margem_anterior REAL, impacto_financeiro REAL, 
+        p_otimista REAL, p_pessimista REAL, p_pert_resultado REAL, total_horas INTEGER, data_emissao TEXT)''')
+    
+    # Verificação amigável de colunas (Migrations manuais)
+    cursor.execute("PRAGMA table_info(historico_pareceres)")
+    colunas = [col[1] for col in cursor.fetchall()]
+    if "total_horas" not in colunas:
+        cursor.execute("ALTER TABLE historico_pareceres ADD COLUMN total_horas INTEGER")
+    if "p_pert_resultado" not in colunas:
+        cursor.execute("ALTER TABLE historico_pareceres ADD COLUMN p_pert_resultado REAL")
+        
     conn.commit()
     return conn
 
 # --- CLASSE PDF EXECUTIVA MASTER ---
 class ExecutiveReport(FPDF):
-    def __init__(self, projeto, gerente):
+    def __init__(self, dados):
         super().__init__()
-        self.projeto = projeto
-        self.gerente = gerente
+        self.d = dados
 
     def header(self):
-        self.set_fill_color(0, 51, 102) 
-        self.rect(0, 0, 210, 45, 'F')
+        self.set_fill_color(0, 51, 102); self.rect(0, 0, 210, 45, 'F')
         self.set_font("Arial", 'B', 18); self.set_text_color(255)
-        self.cell(190, 15, "DOSSIÊ DE IMPACTO E GOVERNANÇA ECONÔMICA", ln=True, align='C')
+        self.cell(190, 15, "DOSSIÊ ESTRATÉGICO DE REEQUILÍBRIO FINANCEIRO", ln=True, align='C')
         self.set_font("Arial", 'B', 10)
-        self.cell(190, 5, f"PROGRAMA: {self.projeto} | RESPONSÁVEL: {self.gerente.upper()}", ln=True, align='C')
-        self.set_font("Arial", '', 8)
-        self.cell(190, 5, f"DOCUMENTO CONFIDENCIAL - EMITIDO EM {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
+        self.cell(190, 5, f"PROGRAMA: {self.d['projeto']} | GERENTE: {self.d['gerente'].upper()}", ln=True, align='C')
         self.ln(20)
 
-    def section_title(self, title, color=(0, 51, 102)):
-        self.set_font("Arial", 'B', 12); self.set_fill_color(240, 240, 240); self.set_text_color(*color)
-        self.cell(190, 10, f"  {title}", ln=True, fill=True)
-        self.ln(3)
-
-    def footer_signatures(self):
-        self.set_y(250)
-        self.line(20, self.get_y(), 90, self.get_y())
-        self.line(120, self.get_y(), 190, self.get_y())
-        self.set_font("Arial", 'B', 9); self.set_text_color(0)
-        self.set_y(self.get_y() + 2)
-        self.set_x(20); self.cell(70, 5, "GERENTE DO PROGRAMA", align='C')
-        self.set_x(120); self.cell(70, 5, "DIRETORIA DE OPERAÇÕES", align='C')
+    def section_header(self, title):
+        self.set_font("Arial", 'B', 11); self.set_fill_color(230, 230, 230); self.set_text_color(0, 51, 102)
+        self.cell(190, 10, f"  {title}", ln=True, fill=True); self.ln(4)
 
 # --- INTERFACE ---
 st.set_page_config(page_title="Simulador Impacto PRO", layout="wide")
 conn = init_db()
 
-st.sidebar.title("🛡️ MV Simulador Impacto Programas PRO")
-aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"])
+st.sidebar.title("🛡️ MV Governança V14")
+aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"], key="main_nav")
 
 if aba == "Nova Análise":
-    st.markdown("<h2 style='color: #003366;'>📋 Elaboração de Dossiê de Impacto para Aprovação</h2>", unsafe_allow_html=True)
-    
-    # 1. IDENTIFICAÇÃO
+    st.markdown("<h2 style='color: #003366;'>📋 1. INFORMAÇÕES GERAIS DO PROGRAMA</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    with c1: 
-        progs = [" ","INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA","GOOD HOPE" , "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
-        nome_projeto = st.selectbox("Selecione o Programa", progs)
-        v_contrato = st.number_input("Valor do Contrato (R$)", value=0.0, step=1000.0)
-    with c2: 
-        gerente_nome = st.text_input("Gerente do Programa")
-        m_original = st.slider("Margem Original Planejada (%)", 0, 100, 35)
-        just_cats = st.multiselect("Motivadores do Desvio", ["Mudança de Go Live", "Retreinamento", "Especificações Funcionais","Erro de Escopo", "Infraestrutura", "Versão Produto"])
+    with c1:
+        progs = ["INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "EINSTEIN"]
+        nome_projeto = st.selectbox("1.1. Selecione o programa", progs)
+    with c2:
+        gerente_nome = st.text_input("1.2. Gerente do Programa")
+    justificativa = st.text_area("1.3. Justificativa do impacto")
 
-    # 2. LANÇAMENTO DE RECURSOS
-    st.subheader("👥 Alocação de Esforço em Tempo Real")
-    with st.form("form_rec", clear_on_submit=True):
-        cl1, cl2, cl3 = st.columns([3, 1, 1])
-        r_nome = cl1.text_input("Recurso / Atividade")
-        r_vh = cl2.number_input("Custo R$/Hora", value=150.0)
-        r_hr = cl3.number_input("Horas Adicionais", min_value=1)
-        if st.form_submit_button("➕ Inserir Linha de Esforço"):
-            conn.cursor().execute("INSERT INTO recursos_projeto (projeto, recurso, categoria, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?)",
-                                   (nome_projeto, r_nome, "PERFIL", r_vh, r_hr, r_vh*r_hr, datetime.now().isoformat()))
+    st.markdown("<h2 style='color: #003366;'>📊 2. ESTRUTURA ATUAL DE CUSTOS</h2>", unsafe_allow_html=True)
+    cc1, cc2, cc3 = st.columns(3)
+    with cc1: receita = st.number_input("2.1. Receita Líquida (R$)", min_value=0.0)
+    with cc2: custos_at = st.number_input("2.2. Custos totais (R$)", min_value=0.0)
+    with cc3:
+        m_atual = ((receita - custos_at) / receita * 100) if receita > 0 else 0
+        st.metric("2.3. Margem atual", f"{m_atual:.2f}%")
+
+    st.markdown("<h2 style='color: #003366;'>👥 3. DIMENSIONAMENTO DE IMPACTO</h2>", unsafe_allow_html=True)
+    with st.form("recurso_form"):
+        f1, f2, f3, f4 = st.columns([2, 2, 1, 1])
+        func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
+        seni = f2.selectbox("Senioridade", ["Junior", "Pleno", "Senior"])
+        vh = f3.number_input("R$/Hora", value=150.0)
+        hrs = f4.number_input("Horas", min_value=1)
+        if st.form_submit_button("➕ Adicionar Recurso"):
+            conn.cursor().execute("INSERT INTO recursos_projeto (projeto, função, senioridade, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?)",
+                                   (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
             conn.commit()
 
-    df_db = pd.read_sql_query(f"SELECT recurso, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
-    total_impacto = df_db['subtotal'].sum() if not df_db.empty else 0.0
-    total_horas = df_db['horas'].sum() if not df_db.empty else 0.0
-    
-    # Cálculos de Margem
-    lucro_orig = v_contrato * (m_original / 100)
-    novo_lucro = lucro_orig - total_impacto
-    nova_margem = (novo_lucro / v_contrato) * 100 if v_contrato > 0 else 0
-    erosao_pp = m_original - nova_margem
-
-    # Termômetro de Risco Visual
-    cor_risco = "green" if erosao_pp < 2 else "orange" if erosao_pp < 10 else "red"
-    st.markdown(f"### 🌡️ Termômetro de Impacto: <span style='color:{cor_risco}'>{erosao_pp:.2f} % de Erosão</span>", unsafe_allow_html=True)
-    
-    st.table(df_db.assign(subtotal=df_db['subtotal'].apply(format_moeda)))
-
-    # 3. PERT E RADAR
-    st.markdown("---")
-    col_p, col_r = st.columns([2, 1])
-    with col_p:
-        st.subheader("🎲 Modelagem de Incerteza (PERT)")
-        c_o = st.number_input("Custo Otimista", value=total_impacto * 0.9)
-        c_m = st.number_input("Custo Provável", value=total_impacto)
-        c_p = st.number_input("Custo Pessimista", value=total_impacto * 1.5)
-        media_c, _ = calcular_pert(c_o, c_m, c_p)
+    df_rec = pd.read_sql_query(f"SELECT função, senioridade, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
+    if not df_rec.empty:
+        st.table(df_rec.assign(subtotal=df_rec['subtotal'].apply(format_moeda)))
+        c_provavel = df_rec['subtotal'].sum()
+        total_hrs = int(df_rec['horas'].sum())
         
-        d_o = st.number_input("Prazo Otimista (Dias)", value=max(1.0, total_horas/8 * 0.8))
-        d_m = st.number_input("Prazo Provável (Dias)", value=max(1.0, total_horas/8))
-        d_p = st.number_input("Prazo Pessimista (Dias)", value=max(2.0, total_horas/8 * 2))
-        media_d, _ = calcular_pert(d_o, d_m, d_p)
-        st.info(f"**Média Estatística:** {format_moeda(media_c)} | Atraso Médio: {media_d:.1f} dias.")
+        c1p, c2p = st.columns(2)
+        with c1p:
+            st.info(f"**3.1. Custo Provável:** {format_moeda(c_provavel)}")
+            c_ot = st.number_input("3.2. Custo Otimista (Manual)", value=0.0)
+            c_pe = st.number_input("3.3. Custo Pessimista (Manual)", value=0.0)
+            res_pert = calcular_pert(c_ot, c_provavel, c_pe) if (c_ot > 0 and c_pe > 0) else 0
+            st.success(f"**Cenário PERT:** {format_moeda(res_pert)}")
+            
+        with c2p:
+            m_pos = (((receita - custos_at) - c_provavel) / receita * 100) if receita > 0 else 0
+            fig, ax = plt.subplots(figsize=(6, 4))
+            valores = [m_atual, m_pos]
+            sns.barplot(x=['Margem Atual', 'Margem Pós-Impacto'], y=valores, palette=['#003366', '#C0392B'], ax=ax)
+            for i, v in enumerate(valores):
+                ax.text(i, v + 0.5, f"{v:.2f}%", ha='center', fontweight='bold')
+            st.pyplot(fig)
 
-    with col_r:
-        st.subheader("📐 Radar de Restrições")
-        r_esc = st.slider("Escopo", 1, 10, 5)
-        r_pra = st.slider("Prazo", 1, 10, 5)
-        r_cus = min(10, (total_impacto / (v_contrato*0.1 if v_contrato > 0 else 1)) * 10)
-        
-        labels = ['Escopo', 'Custo', 'Prazo']
-        stats = [r_esc, r_cus, r_pra]; stats += stats[:1]
-        angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist(); angles += angles[:1]
-        fig_rad, ax = plt.subplots(figsize=(2.5, 2.5), subplot_kw=dict(polar=True))
-        ax.plot(angles, stats, color='yellow', linewidth=2)
-        ax.fill(angles, stats, color='orange', alpha=0.3, hatch='///')
-        plt.xticks(angles[:-1], labels, size=9, fontweight='bold')
-        st.pyplot(fig_rad)
+    if st.button("🚀 Protocolar Dossiê"):
+        # CORREÇÃO: Inserção nomeando as colunas para evitar o OperationalError de contagem
+        sql = '''INSERT INTO historico_pareceres 
+                 (projeto, gerente, justificativa, receita, custos_atuais, margem_anterior, 
+                  impacto_financeiro, p_otimista, p_pessimista, p_pert_resultado, total_horas, data_emissao) 
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'''
+        conn.cursor().execute(sql, (nome_projeto, gerente_nome, justificativa, receita, custos_at, m_atual, 
+                                    c_provavel, c_ot, c_pe, res_pert, total_hrs, datetime.now().isoformat()))
+        conn.commit(); st.success("Dossiê Protocolado!")
 
-    detalhamento = st.text_area("📝 Justificativa Técnica Detalhada (Resumo Executivo):")
-
-    if st.button("🚀 Gerar e Protocolar Dossiê"):
-        conn.cursor().execute('''INSERT INTO historico_pareceres 
-            (projeto, gerente, justificativa_cat, valor_projeto, margem_original, impacto_financeiro, detalhamento, 
-             p_custo_media, p_prazo_media, r_escopo, r_custo, r_prazo, data_emissao) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''', 
-            (nome_projeto, gerente_nome, ", ".join(just_cats), v_contrato, m_original, total_impacto, detalhamento, 
-             media_c, media_d, r_esc, r_cus, r_pra, datetime.now().isoformat()))
-        conn.commit(); st.success("Dossiê Protocolado com Sucesso!")
-
-# --- HUB DE INTELIGÊNCIA ---
 else:
-    st.header("📚 Hub de Inteligência Interativo")
+    st.header("📚 Hub de Inteligência")
     df_h = pd.read_sql_query("SELECT * FROM historico_pareceres ORDER BY data_emissao DESC", conn)
     
     for i, row in df_h.iterrows():
-        with st.expander(f"📄 {row['projeto']} | Impacto: {format_moeda(row['impacto_financeiro'])}"):
-            st.markdown("### Resumo de Auditoria")
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Valor Contrato", format_moeda(row['valor_projeto']))
-            
-            l_orig = row['valor_projeto'] * (row['margem_original']/100)
-            n_margem = ((l_orig - row['impacto_financeiro']) / row['valor_projeto']) * 100
-            
-            col2.metric("Margem Original", f"{row['margem_original']}%")
-            col3.metric("Margem Pós-Impacto", f"{n_margem:.2f}%", f"{n_margem - row['margem_original']:.2f}%", delta_color="inverse")
-
-            if st.button(f"📥 Baixar Dossiê Executivo", key=f"pdf_{row['id']}"):
-                pdf = ExecutiveReport(row['projeto'], row['gerente'])
-                pdf.add_page()
+        with st.expander(f"📋 {row['projeto']} | Impacto: {format_moeda(row['impacto_financeiro'])}"):
+            if st.button(f"📥 Baixar PDF Detalhado", key=f"pdf_{row['id']}"):
+                pdf = ExecutiveReport(row.to_dict()); pdf.add_page()
                 
-                # 1. RESUMO EXECUTIVO
-                pdf.section_title("1. RESUMO EXECUTIVO DO IMPACTO")
+                pdf.section_header("1. INFORMAÇÕES GERAIS E JUSTIFICATIVA")
                 pdf.set_font("Arial", '', 10)
-                pdf.multi_cell(190, 7, f"O programa {row['projeto']} registrou um impacto financeiro nominal de {format_moeda(row['impacto_financeiro'])}.\n"
-                                       f"IMPACTO NA MARGEM: Redução de {row['margem_original']}% para {n_margem:.2f}% ({abs(n_margem - row['margem_original']):.2f} p.p.).\n"
-                                       f"MOTIVADORES: {row['justificativa_cat']}.\n\nNOTAS: {row['detalhamento']}")
+                pdf.multi_cell(190, 7, f"Gerente: {row['gerente']}\nJustificativa: {row['justificativa']}")
                 
-                # 2. RADAR E PERT
-                pdf.ln(5); pdf.section_title("2. ANÁLISE DE RISCO E INCERTEZA (PERT)")
-                pdf.set_font("Arial", 'B', 10)
-                pdf.cell(95, 8, "Custo Médio Ponderado (PERT)", 1); pdf.cell(95, 8, format_moeda(row['p_custo_media']), 1, 1, 'C')
-                pdf.cell(95, 8, "Atraso Médio Estimado", 1); pdf.cell(95, 8, f"{row['p_prazo_media']:.1f} Dias", 1, 1, 'C')
+                pdf.ln(5); pdf.section_header("2. ANALISE DE IMPACTO NA MARGEM")
+                m_pos_h = (((row['receita'] - row['custos_atuais']) - row['impacto_financeiro']) / row['receita'] * 100) if row['receita'] > 0 else 0
+                pdf.cell(95, 8, "Receita Liquida", 1); pdf.cell(95, 8, format_moeda(row['receita']), 1, 1)
+                pdf.cell(95, 8, "Margem Anterior", 1); pdf.cell(95, 8, f"{row['margem_anterior']:.2f}%", 1, 1)
+                pdf.cell(95, 8, "Margem Atualizada", 1); pdf.cell(95, 8, f"{m_pos_h:.2f}%", 1, 1)
                 
-                # Inserir Radar no PDF
-                labels = ['Escopo', 'Custo', 'Prazo']
-                stats = [row['r_escopo'], row['r_custo'], row['r_prazo']]; stats += stats[:1]
-                angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist(); angles += angles[:1]
-                fig_pdf, ax_pdf = plt.subplots(figsize=(3, 3), subplot_kw=dict(polar=True))
-                ax_pdf.plot(angles, stats, color='yellow', linewidth=2)
-                ax_pdf.fill(angles, stats, color='orange', alpha=0.3, hatch=' ')
+                pdf.ln(5); pdf.section_header("3. GRAU DE CONFIANÇA SINTÉTICO (PERT)")
+                detalhe_pert = (f"Com base no esforco de {row['total_horas']} horas adicionais, a analise de confianca "
+                                f"identificou um custo provavel de {format_moeda(row['impacto_financeiro'])}. "
+                                f"A variabilidade estatistica (PERT) projeta uma exposicao de {format_moeda(row['p_pert_resultado'])} "
+                                f"considerando os cenarios otimista e pessimista informados.")
+                pdf.multi_cell(190, 7, detalhe_pert)
                 
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                    fig_pdf.savefig(tmp.name, bbox_inches='tight')
-                    pdf.ln(5); pdf.image(tmp.name, x=70, w=70)
-
-                pdf.footer_signatures()
-                st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                st.download_button("Salvar PDF", bytes(pdf.output(dest='S')), f"DOSSIE_{row['projeto']}.pdf")
