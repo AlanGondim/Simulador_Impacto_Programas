@@ -10,6 +10,9 @@ import tempfile
 
 # --- FUNÇÕES DE ESTATÍSTICA ---
 def format_moeda(valor):
+    """Formata para o padrão brasileiro: R$ 1.234,56 -> R$ 1.234,56"""
+    # f"{valor:,.2f}" gera 1,234.56
+    # Invertemos para o padrão BR: ponto para milhar, vírgula para decimal
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def calcular_pert(o, m, p):
@@ -143,3 +146,4 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
