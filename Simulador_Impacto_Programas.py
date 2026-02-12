@@ -79,7 +79,7 @@ if aba == "Nova Análise":
     # 1. IDENTIFICAÇÃO
     c1, c2 = st.columns(2)
     with c1: 
-        progs = [" ","INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
+        progs = [" ","INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA","GOOD HOPE" , "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
         nome_projeto = st.selectbox("Selecione o Programa", progs)
         v_contrato = st.number_input("Valor do Contrato (R$)", value=100000.0)
     with c2: 
@@ -205,6 +205,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
