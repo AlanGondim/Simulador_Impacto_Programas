@@ -181,7 +181,7 @@ else:
                 # 1. RESUMO EXECUTIVO
                 pdf.section_title("1. RESUMO EXECUTIVO DO IMPACTO")
                 pdf.set_font("Arial", '', 10)
-                pdf.multi_cell(190, 7, f"O programa {row['projeto']} registou um impacto financeiro nominal de {format_moeda(row['impacto_financeiro'])}.\n"
+                pdf.multi_cell(190, 7, f"O programa {row['projeto']} registrou um impacto financeiro nominal de {format_moeda(row['impacto_financeiro'])}.\n"
                                        f"IMPACTO NA MARGEM: Redução de {row['margem_original']}% para {n_margem:.2f}% ({abs(n_margem - row['margem_original']):.2f} p.p.).\n"
                                        f"MOTIVADORES: {row['justificativa_cat']}.\n\nNOTAS: {row['detalhamento']}")
                 
@@ -205,6 +205,7 @@ else:
 
                 pdf.footer_signatures()
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_PRO_{row['projeto']}.pdf")
+
 
 
 
