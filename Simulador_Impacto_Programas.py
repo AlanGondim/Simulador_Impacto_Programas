@@ -77,8 +77,8 @@ if aba == "Nova Análise":
     with st.form("form_rec"):
         f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
         func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
-        seni = f2.selectbox("Senioridade", ["Junior", "Pleno", "Senior"])
-        vh = f3.number_input("Custo/Hora", value=150.0)
+        seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
+        vh = f3.number_input("Custo/Hora", value=150.0, step=5.0)
         hrs = f4.number_input("Horas Extras", min_value=1)
         if st.form_submit_button("➕ Adicionar Esforço"):
             conn.cursor().execute("INSERT INTO recursos_projeto VALUES (NULL,?,?,?,?,?,?,?)", (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
@@ -146,4 +146,5 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
