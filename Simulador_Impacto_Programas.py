@@ -10,7 +10,7 @@ import tempfile
 
 # --- FUNÇÕES DE ESTATÍSTICA ---
 def format_moeda(valor):
-    """Formata para o padrão brasileiro: R$ 1.234,56 -> R$ 1.234,56"""
+    """Formata para o padrão brasileiro: R$ 1.000,00"""
     # f"{valor:,.2f}" gera 1,234.56
     # Invertemos para o padrão BR: ponto para milhar, vírgula para decimal
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -21,7 +21,7 @@ def calcular_pert(o, m, p):
 def simular_monte_carlo(o, m, p, n=2000):
     if o >= p: return m, m
     simulacoes = np.random.triangular(o, m, p, n)
-    return np.mean(simulacoes), np.percentile(simulacoes, 85) # P85 para segurança executiva
+    return np.mean(simulacoes), np.percentile(simulacoes, 95) # P95 para segurança executiva
 
 # --- BANCO DE DADOS (V19) ---
 def init_db():
@@ -106,13 +106,13 @@ if aba == "Nova Análise":
             c_ot = st.number_input("Custo Otimista (R$)", value=total_impacto * 0.9)
             c_pe = st.number_input("Custo Pessimista (R$)", value=total_impacto * 1.5)
             res_c_pert = calcular_pert(c_ot, total_impacto, c_pe)
-            mean_mc, p85_mc = simular_monte_carlo(c_ot, total_impacto, c_pe)
+            mean_mc, p95_mc = simular_monte_carlo(c_ot, total_impacto, c_pe)
             st.metric("Exposição Financeira (PERT)", format_moeda(res_c_pert))
-            st.metric("Risco Probabilístico (Monte Carlo P85)", format_moeda(p85_mc))
+            st.metric("Risco Probabilístico (Monte Carlo P95)", format_moeda(p95_mc))
 
     if st.button("🚀 Protocolar Reequilíbrio"):
         sql = '''INSERT INTO historico_pareceres (projeto, gerente, justificativa, receita, custos_atuais, margem_anterior, impacto_financeiro, p_otimista, p_pessimista, p_pert_resultado, d_otimista, d_provavel, d_pessimista, d_pert_resultado, p_mc_resultado, total_horas, data_emissao) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
-        conn.cursor().execute(sql, (nome_projeto, gerente_nome, justificativa, receita, custos_at, (receita-custos_at)/receita*100, total_impacto, c_ot, c_pe, res_c_pert, d_ot, d_prov, d_pe, res_d_pert, p85_mc, total_horas, datetime.now().isoformat()))
+        conn.cursor().execute(sql, (nome_projeto, gerente_nome, justificativa, receita, custos_at, (receita-custos_at)/receita*100, total_impacto, c_ot, c_pe, res_c_pert, d_ot, d_prov, d_pe, res_d_pert, p95_mc, total_horas, datetime.now().isoformat()))
         conn.commit(); st.success("Protocolado!")
 
 else:
@@ -136,8 +136,8 @@ else:
                 pdf.ln(5); pdf.section("2. MODELAGEM DE CONFIANCA (MONTE CARLO & PERT)")
                 txt_est = (f"Para este desvio, aplicamos 2.000 iteracoes de Monte Carlo. "
                            f"O Custo PERT calculado foi de {format_moeda(row['p_pert_resultado'])}. "
-                           f"A simulacao Monte Carlo P85 indica uma reserva de {format_moeda(row['p_mc_resultado'])} "
-                           f"para cobrir 85% dos cenários de risco financeiro.")
+                           f"A simulacao Monte Carlo P95 indica uma reserva de {format_moeda(row['p_mc_resultado'])} "
+                           f"para cobrir 95% dos cenários de risco financeiro.")
                 pdf.multi_cell(190, 7, txt_est)
                 
                 pdf.ln(5); pdf.section("3. ENGENHARIA DE CRONOGRAMA (PERT PRAZO)")
@@ -146,5 +146,6 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
