@@ -161,7 +161,7 @@ if aba == "Nova Análise":
             st.pyplot(fig)
         with col_g2:
             st.metric("Margem Original", f"{m_ant:.2f}%")
-            st.metric("Erosão Projetada", f"{m_pos:.2f}%", f"{m_pos - m_ant:.2f}%", delta_color="inverse")
+            st.metric("Erosão Projetada", f"{m_pos:.2f}%", f"{m_pos - m_ant:.2f}%", delta_color="normal")
 
         # 4. MODELAGEM DE INCERTEZA
         st.markdown("<h2 style='color: #003366;'>🎲 4. MODELAGEM DE INCERTEZA</h2>", unsafe_allow_html=True)
@@ -218,6 +218,7 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
 
