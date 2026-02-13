@@ -39,9 +39,11 @@ def init_db():
 
 # --- CLASSE PDF EXECUTIVA MASTER (COM MARCA D'ÁGUA E ASSINATURAS) ---
 class ExecutiveReport(FPDF):
-    def __init__(self, dados):
+    def __init__(self, dados, df_recursos=None, grafico_path=None):
         super().__init__()
         self.d = dados
+        self.df_recursos = df_recursos
+        self.grafico_path = grafico_path
 
     def header(self):
         # Topo azul escuro corporativo
@@ -198,30 +200,71 @@ else:
             # Dados Financeiros Interativos
             m_pos_h = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100) if row['receita'] > 0 else 0
             df_det = pd.DataFrame({
-                "KPI": ["Receita Líquida", "Impacto Nominal", "Custo PERT (Risco)", "Teto MC P95", "Margem Final"],
-                "Valor": [format_moeda(row['receita']), format_moeda(row['impacto_financeiro']), format_moeda(row['p_pert_resultado']), format_moeda(row['p_mc_resultado']), f"{m_pos_h:.2f}%"]
+                "KPI": ["Receita Líquida", "Custos Totais (ERP)", "Margem Atual", "Impacto Nominal", "Custo PERT (Risco)", "Teto MC P95", "Margem Final"],
+                "Valor": [
+                    format_moeda(row['receita']), 
+                    format_moeda(row['custos_atuais']), 
+                    f"{row['margem_anterior']:.2f}%",
+                    format_moeda(row['impacto_financeiro']), 
+                    format_moeda(row['p_pert_resultado']), 
+                    format_moeda(row['p_mc_resultado']), 
+                    f"{m_pos_h:.2f}%"
+                ]
             })
             st.table(df_det)
             
+            # Buscar analítico de recursos para o dossiê
+            df_recursos_h = pd.read_sql_query(f"SELECT função, senioridade, horas, subtotal FROM recursos_projeto WHERE projeto = '{row['projeto']}'", conn)
+            st.markdown("**Analítico de Recursos Alocados:**")
+            st.dataframe(df_recursos_h, use_container_width=True)
+            
+            
             if st.button(f"📥 GERAR DOSSIÊ PREMIUM", key=f"pdf_{row['id']}"):
-                pdf = ExecutiveReport(row.to_dict()); pdf.add_page()
+                # Gerar gráfico temporário para o PDF
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                    fig_h, ax_h = plt.subplots(figsize=(5, 3))
+                    sns.barplot(x=['Atual', 'Pós-Impacto'], y=[row['margem_anterior'], m_pos_h], palette=['#003366', '#C0392B'], ax=ax_h)
+                    ax_h.set_title("Erosão de Margem (%)")
+                    fig_h.savefig(tmpfile.name)
+                    grafico_path = tmpfile.name
+
+                pdf = ExecutiveReport(row.to_dict(), df_recursos=df_recursos_h, grafico_path=grafico_path)
+                pdf.add_page()
                 
                 pdf.section("1. INFORMACOES DO PROGRAMA")
                 pdf.set_font("Arial", '', 10); pdf.set_text_color(0)
                 pdf.multi_cell(190, 7, f"CATEGORIAS: {row['categoria']}\nJUSTIFICATIVA: {row['justificativa']}")
-                pdf.ln(2); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos-Impacto: {m_pos_h:.2f}%", ln=True)
                 
-                pdf.ln(5); pdf.section("2. MODELAGEM ESTATISTICA E INCERTEZA")
-                pdf.multi_cell(190, 7, f"Com base em 2.000 iteracoes de Monte Carlo, o Teto de Risco Financeiro para este desvio foi fixado em {format_moeda(row['p_mc_resultado'])} com 95% de confianca.\nO Custo PERT esperado e de {format_moeda(row['p_pert_resultado'])}.")
+                pdf.ln(2)
+                pdf.section("2. ANALISE FINANCEIRA E EROSAO")
+                pdf.cell(95, 7, f"Receita Liquida: {format_moeda(row['receita'])}", ln=0)
+                pdf.cell(95, 7, f"Custos Atuais (ERP): {format_moeda(row['custos_atuais'])}", ln=1)
+                pdf.cell(95, 7, f"Margem Anterior: {row['margem_anterior']:.2f}%", ln=0)
+                pdf.cell(95, 7, f"Margem Pos-Impacto: {m_pos_h:.2f}%", ln=1)
+                pdf.cell(190, 7, f"Impacto Nominal Estimado: {format_moeda(row['impacto_financeiro'])}", ln=1)
                 
-                pdf.ln(5); pdf.section("3. ANÁLISE DE PRAZO")
-                pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
+                # Plotar gráfico no PDF
+                pdf.image(grafico_path, x=130, y=105, w=60)
                 
-                st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+                pdf.ln(5)
+                pdf.section("3. ANALITICO DE RECURSOS ALOCADOS")
+                pdf.set_font("Arial", 'B', 9)
+                pdf.cell(50, 7, "Funcao", 1); pdf.cell(40, 7, "Senioridade", 1); pdf.cell(30, 7, "Horas", 1); pdf.cell(70, 7, "Subtotal", 1); pdf.ln()
+                pdf.set_font("Arial", '', 9)
+                for _, rec in df_recursos_h.iterrows():
+                    pdf.cell(50, 7, str(rec['função']), 1)
+                    pdf.cell(40, 7, str(rec['senioridade']), 1)
+                    pdf.cell(30, 7, str(rec['horas']), 1)
+                    pdf.cell(70, 7, format_moeda(rec['subtotal']), 1); pdf.ln()
 
-
-
-
+                pdf.ln(5); pdf.section("4. MODELAGEM ESTATISTICA (RISCO)")
+                pdf.multi_cell(190, 7, f"Custo PERT Esperado: {format_moeda(row['p_pert_resultado'])}\nTeto de Risco (Monte Carlo 95%): {format_moeda(row['p_mc_resultado'])}\nEsforco Total: {row['total_horas']} horas | Prazo (PERT): {row['d_pert_resultado']:.1f} dias.")
+                
+                st.download_button("Clique aqui para baixar o PDF", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+                
+                # Limpar arquivo temporário
+                if os.path.exists(grafico_path):
+                    os.remove(grafico_path)
 
 
 
