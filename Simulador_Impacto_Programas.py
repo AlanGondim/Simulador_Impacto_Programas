@@ -168,8 +168,8 @@ if aba == "Nova Análise":
         cp1, cp2 = st.columns(2)
         with cp1:
             st.subheader("Financeiro (PERT/Monte Carlo)")
-            c_ot = st.number_input("Custo Otimista", value=total_imp * 0.9)
-            c_pe = st.number_input("Custo Pessimista", value=total_imp * 1.5)
+            c_ot = st.number_input("Custo Otimista", value=total_imp * 0.9, step=1000.0)
+            c_pe = st.number_input("Custo Pessimista", value=total_imp * 1.5, step=1000.0 )
             res_c_pert = calcular_pert(c_ot, total_imp, c_pe)
             _, p95_mc = simular_monte_carlo(c_ot, total_imp, c_pe)
             st.success(f"**Exposição PERT:** {format_moeda(res_c_pert)}")
@@ -218,5 +218,6 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
