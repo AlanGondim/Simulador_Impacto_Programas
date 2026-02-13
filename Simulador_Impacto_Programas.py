@@ -102,22 +102,7 @@ if aba == "Nova Análise":
 
         st.markdown("<h2 style='color: #003366;'>🎲 3. MODELAGEM DE INCERTEZA (PRAZO & CUSTO)</h2>", unsafe_allow_html=True)
         col_pert1, col_pert2 = st.columns(2)
-
-       # Margem ANTES e DEPOIS para o gráfico
-        m_ant = ((receita - custos_at) / receita * 100) if receita > 0 else 0
-        m_pos = (((receita - custos_at) - total_impacto) / receita * 100) if receita > 0 else 0
-
-        with col_g1:
-            st.subheader("📊 Erosão de Margem (%)")
-            fig, ax = plt.subplots(figsize=(6, 5))
-            labels = ['Margem Atual', 'Margem Pós-Impacto']
-            valores = [m_ant, m_pos]
-            sns.barplot(x=labels, y=valores, palette=['#003366', '#C0392B'], ax=ax)
-            for i, v in enumerate(valores):
-                ax.text(i, v + 0.5, f"{v:.2f}%", ha='center', fontweight='bold', size=12)
-            ax.set_ylim(0, max(m_ant, 15) + 5)
-            st.pyplot(fig)
-            
+                 
         with col_pert1:
             st.subheader("📅 PERT de Prazo (Dias)")
             d_prov = total_horas / 8 # Estimativa base 8h/dia
@@ -173,6 +158,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
