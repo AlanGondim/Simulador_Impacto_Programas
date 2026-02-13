@@ -243,9 +243,7 @@ else:
                 pdf.cell(95, 7, f"Margem Pos-Impacto: {m_pos_h:.2f}%", ln=1)
                 pdf.cell(190, 7, f"Impacto Nominal Estimado: {format_moeda(row['impacto_financeiro'])}", ln=1)
                 
-                # Plotar gráfico no PDF
-                pdf.image(grafico_path, x=130, y=105, w=60)
-                
+                               
                 pdf.ln(5)
                 pdf.section("3. ANALITICO DE RECURSOS ALOCADOS")
                 pdf.set_font("Arial", 'B', 9)
@@ -265,6 +263,7 @@ else:
                 # Limpar arquivo temporário
                 if os.path.exists(grafico_path):
                     os.remove(grafico_path)
+
 
 
 
