@@ -11,8 +11,6 @@ import tempfile
 # --- FUNÇÕES DE ESTATÍSTICA ---
 def format_moeda(valor):
     """Formata para o padrão brasileiro: R$ 1.000,00"""
-    # f"{valor:,.2f}" gera 1,234.56
-    # Invertemos para o padrão BR: ponto para milhar, vírgula para decimal
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def calcular_pert(o, m, p):
@@ -71,7 +69,6 @@ if aba == "Nova Análise":
         gerente_nome = st.text_input("Gerente Responsável")
         custos_at = st.number_input("Custos Totais ERP (R$)", value=0.0, step=1000.0)
     
-   # NOVO CAMPO: CATEGORIA (MULTIPLE CHOICE)
     lista_categorias = ["Go Live", "Retreinamento", "Especificações Funcionais", "Indisponibilidade de Infraestrutura", "Replanejamento", "Incompatibilidade de versão implantada"]
     categorias_selecionadas = st.multiselect("1.3. Categoria(s) do Desvio", lista_categorias)
     
@@ -100,29 +97,57 @@ if aba == "Nova Análise":
         total_impacto = df_rec['subtotal'].sum()
         total_horas = int(df_rec['horas'].sum())
 
-        st.markdown("<h2 style='color: #003366;'>🎲 3. MODELAGEM DE INCERTEZA (PRAZO & CUSTO)</h2>", unsafe_allow_html=True)
-        col_pert1, col_pert2 = st.columns(2)
-                     
-        with col_pert1:
-            st.subheader("📅 PERT de Prazo (Dias)")
-            d_prov = total_horas / 8 # Estimativa base 8h/dia
-            d_ot = st.number_input("Prazo Otimista (Dias)", value=d_prov * 0.8)
-            d_pe = st.number_input("Prazo Pessimista (Dias)", value=d_prov * 2.0)
-            res_d_pert = calcular_pert(d_ot, d_prov, d_pe)
-            st.metric("Duração Esperada (PERT)", f"{res_d_pert:.1f} Dias")
+        st.markdown("<h2 style='color: #003366;'>🎲 3. MODELAGEM DE INCERTEZA E EROSÃO DE MARGEM</h2>", unsafe_allow_html=True)
+        col_graf, col_pert = st.columns([1.2, 1])
+        
+        # --- CÁLCULO E PLOTAGEM DA EROSÃO DE MARGEM ---
+        margem_antes = ((receita - custos_at) / receita * 100) if receita > 0 else 0
+        margem_depois = ((receita - custos_at - total_impacto) / receita * 100) if receita > 0 else 0
 
-        with col_pert2:
-            st.subheader("💰 PERT de Custo (Financeiro)")
+        with col_graf:
+            st.subheader("📊 Gráfico de Erosão de Margem")
+            fig, ax = plt.subplots(figsize=(6, 4))
+            labels = ['Margem Antes', 'Margem Depois']
+            valores = [margem_antes, margem_depois]
+            cores = ['#003366', '#C0392B'] # Azul corporativo e Vermelho Alerta
+
+            sns.barplot(x=labels, y=valores, palette=cores, ax=ax)
+            
+            # Adicionando os valores em cima de cada coluna
+            for i, v in enumerate(valores):
+                ax.text(i, v + 0.5, f"{v:.2f}%", ha='center', fontweight='bold', color='black')
+            
+            ax.set_ylabel("% de Margem")
+            ax.set_ylim(0, max(valores) + 10)
+            st.pyplot(fig)
+
+        with col_pert:
+            st.subheader("🎯 Métricas de Risco")
+            st.metric("Margem Original", f"{margem_antes:.2f}%")
+            st.metric("Margem Pós-Impacto", f"{margem_depois:.2f}%", f"{margem_depois - margem_antes:.2f}%", delta_color="inverse")
+            
+            st.divider()
+            
             c_ot = st.number_input("Custo Otimista (R$)", value=total_impacto * 0.9)
             c_pe = st.number_input("Custo Pessimista (R$)", value=total_impacto * 1.5)
             res_c_pert = calcular_pert(c_ot, total_impacto, c_pe)
             mean_mc, p95_mc = simular_monte_carlo(c_ot, total_impacto, c_pe)
-            st.metric("Exposição Financeira (PERT)", format_moeda(res_c_pert))
-            st.metric("Risco Probabilístico (Monte Carlo P95)", format_moeda(p95_mc))
+            
+            st.write(f"**Exposição Financeira (PERT):** {format_moeda(res_c_pert)}")
+            st.write(f"**Monte Carlo P95:** {format_moeda(p95_mc)}")
+
+        # --- PERT DE PRAZO ---
+        st.markdown("---")
+        st.subheader("📅 PERT de Prazo (Dias)")
+        d_prov = total_horas / 8
+        d_ot = st.number_input("Prazo Otimista (Dias)", value=d_prov * 0.8)
+        d_pe = st.number_input("Prazo Pessimista (Dias)", value=d_prov * 2.0)
+        res_d_pert = calcular_pert(d_ot, d_prov, d_pe)
+        st.info(f"Duração Esperada (PERT): **{res_d_pert:.1f} Dias**")
 
     if st.button("🚀 Protocolar Dossiê"):
-        sql = '''INSERT INTO historico_pareceres (projeto, gerente, justificativa, receita, custos_atuais, margem_anterior, impacto_financeiro, p_otimista, p_pessimista, p_pert_resultado, d_otimista, d_provavel, d_pessimista, d_pert_resultado, p_mc_resultado, total_horas, data_emissao) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
-        conn.cursor().execute(sql, (nome_projeto, gerente_nome, justificativa, receita, custos_at, (receita-custos_at)/receita*100, total_impacto, c_ot, c_pe, res_c_pert, d_ot, d_prov, d_pe, res_d_pert, p95_mc, total_horas, datetime.now().isoformat()))
+        sql = '''INSERT INTO historico_pareceres (projeto, gerente, categoria, justificativa, receita, custos_atuais, margem_anterior, impacto_financeiro, p_otimista, p_pessimista, p_pert_resultado, d_otimista, d_provavel, d_pessimista, d_pert_resultado, p_mc_resultado, total_horas, data_emissao) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
+        conn.cursor().execute(sql, (nome_projeto, gerente_nome, ", ".join(categorias_selecionadas), justificativa, receita, custos_at, (receita-custos_at)/receita*100, total_impacto, c_ot, c_pe, res_c_pert, d_ot, d_prov, d_pe, res_d_pert, p95_mc, total_horas, datetime.now().isoformat()))
         conn.commit(); st.success("Protocolado!")
 
 else:
@@ -131,48 +156,18 @@ else:
     for i, row in df_h.iterrows():
         with st.expander(f"📋 {row['projeto']} | Gerente: {row['gerente']} | Status: Protocolado"):
             st.markdown(f"**Justificativa:** {row['justificativa']}")
-            
-            # Layout do Hub 
             df_fin = pd.DataFrame({"Indicador": ["Receita", "Impacto PERT", "Horas Totais"], "Valor": [format_moeda(row['receita']), format_moeda(row['p_pert_resultado']), f"{row['total_horas']}h"]})
             st.table(df_fin)
             
             if st.button(f"📥 Gerar Dossiê Premium", key=f"pdf_{row['id']}"):
                 pdf = ExecutiveReport(row.to_dict()); pdf.add_page()
-                
                 pdf.section("1. INFORMAÇÕES GERAIS DO PROGRAMA")
                 m_pos = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100) if row['receita'] > 0 else 0
                 pdf.set_font("Arial", 'B', 10); pdf.cell(190, 7, f"CATEGORIA(S) DO DESVIO: {row['categoria']}", ln=True)
                 pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 7, f"JUSTIFICATIVA TECNICA: {row['justificativa']}")
                 pdf.ln(5); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos: {m_pos:.2f}%", ln=True)
-                
                 pdf.ln(5); pdf.section("2. MODELAGEM DE CONFIANÇA (MONTE CARLO & PERT)")
-                txt_est = (f"Para este desvio, aplicamos 2.000 interações de Monte Carlo. "
-                           f"O Custo PERT calculado foi de {format_moeda(row['p_pert_resultado'])}. "
-                           f"A simulacao Monte Carlo P95 indica uma reserva de {format_moeda(row['p_mc_resultado'])} "
-                           f"para cobrir 95% dos cenários de risco financeiro.")
-                pdf.multi_cell(190, 7, txt_est)
-                
+                pdf.multi_cell(190, 7, f"O Custo PERT calculado foi de {format_moeda(row['p_pert_resultado'])}. A simulacao Monte Carlo P95 indica uma reserva de {format_moeda(row['p_mc_resultado'])}.")
                 pdf.ln(5); pdf.section("3. ANÁLISE DE CRONOGRAMA (PERT PRAZO)")
-                txt_prazo = (f"Duração Otimista: {row['d_otimista']:.1f} dias | Provavel: {row['d_provavel']:.1f} dias | Pessimista: {row['d_pessimista']:.1f} dias.\n"
-                             f"DURACAO ESPERADA DO IMPACTO: {row['d_pert_resultado']:.1f} DIAS UTEIS.")
-                pdf.multi_cell(190, 7, txt_prazo)
-                
+                pdf.multi_cell(190, 7, f"DURACAO ESPERADA DO IMPACTO: {row['d_pert_resultado']:.1f} DIAS UTEIS.")
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
