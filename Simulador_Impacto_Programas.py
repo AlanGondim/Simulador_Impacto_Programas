@@ -128,7 +128,7 @@ if aba == "Nova Análise":
             with st.form("form_edit_rec"):
                 rec_sel = df_rec[df_rec['id'] == id_para_editar].iloc[0]
                 e1, e2, e3 = st.columns(3)
-                new_vh = e1.number_input("Novo Custo/Hora", value=float(rec_sel['custo_hora']))
+                new_vh = e1.number_input("Novo Custo/Hora", value=float(rec_sel['custo_hora']), step=5.0)
                 new_hrs = e2.number_input("Novas Horas", value=int(rec_sel['horas']))
                 if st.form_submit_button("💾 Salvar Alterações"):
                     conn.cursor().execute("UPDATE recursos_projeto SET custo_hora = ?, horas = ?, subtotal = ? WHERE id = ?", (new_vh, new_hrs, new_vh*new_hrs, id_para_editar))
@@ -218,6 +218,7 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
 
