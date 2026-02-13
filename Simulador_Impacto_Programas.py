@@ -177,8 +177,8 @@ if aba == "Nova Análise":
         with cp2:
             st.subheader("Prazo (Dias Úteis)")
             d_prov = total_hrs / 8
-            d_ot = st.number_input("Prazo Otimista", value=d_prov * 0.8)
-            d_pe = st.number_input("Prazo Pessimista", value=d_prov * 2.0)
+            d_ot = st.number_input("Prazo Otimista", value=d_prov * 0.8, step=1.0)
+            d_pe = st.number_input("Prazo Pessimista", value=d_prov * 2.0, step=1.0)
             res_d_pert = calcular_pert(d_ot, d_prov, d_pe)
             st.info(f"**Duração Esperada:** {res_d_pert:.1f} Dias")
 
@@ -218,6 +218,7 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
 
