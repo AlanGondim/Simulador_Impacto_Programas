@@ -134,7 +134,7 @@ else:
             if st.button(f"📥 Gerar Dossiê Premium", key=f"pdf_{row['id']}"):
                 pdf = ExecutiveReport(row.to_dict()); pdf.add_page()
                 
-                pdf.section("1. ANÁLISE DE MARGEM E DRE")
+                pdf.section("1. INFORMAÇÕES GERAIS DO PROGRAMA")
                 m_pos = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100)
                 pdf.set_font("Arial", '', 10); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos: {m_pos:.2f}%", ln=True)
                 
@@ -145,12 +145,13 @@ else:
                            f"para cobrir 95% dos cenários de risco financeiro.")
                 pdf.multi_cell(190, 7, txt_est)
                 
-                pdf.ln(5); pdf.section("3. ENGENHARIA DE CRONOGRAMA (PERT PRAZO)")
+                pdf.ln(5); pdf.section("3. ANÁLISE DE CRONOGRAMA (PERT PRAZO)")
                 txt_prazo = (f"Duração Otimista: {row['d_otimista']:.1f} dias | Provavel: {row['d_provavel']:.1f} dias | Pessimista: {row['d_pessimista']:.1f} dias.\n"
                              f"DURACAO ESPERADA DO IMPACTO: {row['d_pert_resultado']:.1f} DIAS UTEIS.")
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
