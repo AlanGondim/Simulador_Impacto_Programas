@@ -23,7 +23,7 @@ def simular_monte_carlo(o, m, p, n=2000):
 
 # --- BANCO DE DADOS ---
 def init_db():
-    conn = sqlite3.connect('mv_impacto_programas_v21.db')
+    conn = sqlite3.connect('mv_simulador_impacto_programas.db')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto 
         (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, função TEXT, 
@@ -75,7 +75,7 @@ class ExecutiveReport(FPDF):
 st.set_page_config(page_title="MV Simulador PRO", layout="wide")
 conn = init_db()
 
-st.sidebar.title("🛡️ MV IMPACTO PRO")
+st.sidebar.title("🛡️ MV SIMULADOR IMPACTO PRO")
 aba = st.sidebar.radio("Menu Principal", ["Nova Análise", "Hub de Inteligência"])
 
 if aba == "Nova Análise":
@@ -218,6 +218,7 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
 
