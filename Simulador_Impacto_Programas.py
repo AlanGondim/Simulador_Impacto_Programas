@@ -138,8 +138,8 @@ else:
                 m_pos = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100)
                 pdf.set_font("Arial", '', 10); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos: {m_pos:.2f}%", ln=True)
                 
-                pdf.ln(5); pdf.section("2. MODELAGEM DE CONFIANCA (MONTE CARLO & PERT)")
-                txt_est = (f"Para este desvio, aplicamos 2.000 iteracoes de Monte Carlo. "
+                pdf.ln(5); pdf.section("2. MODELAGEM DE CONFIANÇA (MONTE CARLO & PERT)")
+                txt_est = (f"Para este desvio, aplicamos 2.000 interações de Monte Carlo. "
                            f"O Custo PERT calculado foi de {format_moeda(row['p_pert_resultado'])}. "
                            f"A simulacao Monte Carlo P95 indica uma reserva de {format_moeda(row['p_mc_resultado'])} "
                            f"para cobrir 95% dos cenários de risco financeiro.")
@@ -151,6 +151,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
