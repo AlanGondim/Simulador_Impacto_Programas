@@ -86,7 +86,7 @@ if aba == "Nova Análise":
 
     df_rec = pd.read_sql_query(f"SELECT * FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
     if not df_rec.empty:
-        st.table(df_rec[['função', 'senioridade','Custo/Hora', 'horas', 'subtotal']].assign(subtotal=df_rec['subtotal'].apply(format_moeda)))
+        st.table(df_rec[['função', 'senioridade','horas', 'subtotal']].assign(subtotal=df_rec['subtotal'].apply(format_moeda)))
         total_impacto = df_rec['subtotal'].sum()
         total_horas = int(df_rec['horas'].sum())
 
@@ -146,6 +146,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
