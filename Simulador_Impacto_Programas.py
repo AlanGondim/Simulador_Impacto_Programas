@@ -23,15 +23,15 @@ def simular_monte_carlo(o, m, p, n=2000):
     simulacoes = np.random.triangular(o, m, p, n)
     return np.mean(simulacoes), np.percentile(simulacoes, 95) # P95 para segurança executiva
 
-# --- BANCO DE DADOS (V19) ---
+# --- BANCO DE DADOS (V20) ---
 def init_db():
-    conn = sqlite3.connect('mv_impacto_programas.db')
+    conn = sqlite3.connect('mv_impacto_programas_v20.db')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS recursos_projeto 
         (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, função TEXT, 
         senioridade TEXT, custo_hora REAL, horas INTEGER, subtotal REAL, data_registro TEXT)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS historico_pareceres 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, justificativa TEXT, 
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, projeto TEXT, gerente TEXT, categoria TEXT, justificativa TEXT, 
         receita REAL, custos_atuais REAL, margem_anterior REAL, impacto_financeiro REAL, 
         p_otimista REAL, p_pessimista REAL, p_pert_resultado REAL, 
         d_otimista REAL, d_provavel REAL, d_pessimista REAL, d_pert_resultado REAL,
@@ -71,17 +71,22 @@ if aba == "Nova Análise":
         gerente_nome = st.text_input("Gerente Responsável")
         custos_at = st.number_input("Custos Totais ERP (R$)", value=0.0, step=1000.0)
     
-    justificativa = st.text_area("Justificativa Técnica do Desvio")
+   # NOVO CAMPO: CATEGORIA (MULTIPLE CHOICE)
+    lista_categorias = ["Go Live", "Retreinamento", "Especificações Funcionais", "Indisponibilidade de Infraestrutura", "Replanejamento", "Incompatibilidade de versão implantada"]
+    categorias_selecionadas = st.multiselect("1.3. Categoria(s) do Desvio", lista_categorias)
+    
+    justificativa = st.text_area("1.4. Justificativa Técnica Detalhada")
 
-    st.markdown("<h2 style='color: #003366;'>👥 2. ALOCAÇÃO DE RECURSOS E CUSTOS</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #003366;'>👥 2. ALOCAÇÃO DE RECURSOS</h2>", unsafe_allow_html=True)
     with st.form("form_rec"):
         f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
         func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
         seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
         vh = f3.number_input("Custo/Hora", value=150.0, step=5.0)
-        hrs = f4.number_input("Horas Extras", min_value=1)
-        if st.form_submit_button("➕ Adicionar Esforço"):
-            conn.cursor().execute("INSERT INTO recursos_projeto VALUES (NULL,?,?,?,?,?,?,?)", (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
+        hrs = f4.number_input("Horas", min_value=1)
+        if st.form_submit_button("➕ Adicionar Recurso"):
+            conn.cursor().execute("INSERT INTO recursos_projeto (projeto, função, senioridade, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?)",
+                                   (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
             conn.commit()
 
     df_rec = pd.read_sql_query(f"SELECT * FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
@@ -115,7 +120,7 @@ if aba == "Nova Análise":
             st.metric("Exposição Financeira (PERT)", format_moeda(res_c_pert))
             st.metric("Risco Probabilístico (Monte Carlo P95)", format_moeda(p95_mc))
 
-    if st.button("🚀 Protocolar Reequilíbrio"):
+    if st.button("🚀 Protocolar Dossiê"):
         sql = '''INSERT INTO historico_pareceres (projeto, gerente, justificativa, receita, custos_atuais, margem_anterior, impacto_financeiro, p_otimista, p_pessimista, p_pert_resultado, d_otimista, d_provavel, d_pessimista, d_pert_resultado, p_mc_resultado, total_horas, data_emissao) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
         conn.cursor().execute(sql, (nome_projeto, gerente_nome, justificativa, receita, custos_at, (receita-custos_at)/receita*100, total_impacto, c_ot, c_pe, res_c_pert, d_ot, d_prov, d_pe, res_d_pert, p95_mc, total_horas, datetime.now().isoformat()))
         conn.commit(); st.success("Protocolado!")
@@ -127,7 +132,7 @@ else:
         with st.expander(f"📋 {row['projeto']} | Gerente: {row['gerente']} | Status: Protocolado"):
             st.markdown(f"**Justificativa:** {row['justificativa']}")
             
-            # Layout do Hub conforme solicitado
+            # Layout do Hub 
             df_fin = pd.DataFrame({"Indicador": ["Receita", "Impacto PERT", "Horas Totais"], "Valor": [format_moeda(row['receita']), format_moeda(row['p_pert_resultado']), f"{row['total_horas']}h"]})
             st.table(df_fin)
             
@@ -151,6 +156,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
