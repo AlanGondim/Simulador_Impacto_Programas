@@ -23,7 +23,7 @@ def simular_monte_carlo(o, m, p, n=2000):
     simulacoes = np.random.triangular(o, m, p, n)
     return np.mean(simulacoes), np.percentile(simulacoes, 95) # P95 para segurança executiva
 
-# --- BANCO DE DADOS (V20) ---
+# --- BANCO DE DADOS  ---
 def init_db():
     conn = sqlite3.connect('mv_impacto_programas_v20.db')
     cursor = conn.cursor()
@@ -102,6 +102,10 @@ if aba == "Nova Análise":
 
         st.markdown("<h2 style='color: #003366;'>🎲 3. MODELAGEM DE INCERTEZA (PRAZO & CUSTO)</h2>", unsafe_allow_html=True)
         col_pert1, col_pert2 = st.columns(2)
+
+        # Margem ANTES e DEPOIS para o gráfico
+        m_ant = ((receita - custos_at) / receita * 100) if receita > 0 else 0
+        m_pos = (((receita - custos_at) - total_impacto) / receita * 100) if receita > 0 else 0
         
         with col_pert1:
             st.subheader("📅 PERT de Prazo (Dias)")
@@ -158,6 +162,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
