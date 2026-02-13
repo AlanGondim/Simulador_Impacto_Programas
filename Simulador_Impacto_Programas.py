@@ -85,7 +85,7 @@ if aba == "Nova Análise":
     with c1:
         progs = [" ", "INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "GOOD HOPE", "EINSTEIN","MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
         nome_projeto = st.selectbox("1.1. Selecione o Programa", progs)
-        receita = st.number_input("1.2. Receita Líquida (R$)", value=1000.0, step=1000.0)
+        receita = st.number_input("1.2. Receita Líquida (R$)", value=0.0, step=1000.0)
     with c2:
         gerente_nome = st.text_input("1.3. Gerente Responsável")
         custos_at = st.number_input("1.4. Custos Totais ERP (R$)", value=0.0, step=1000.0)
@@ -183,3 +183,4 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
