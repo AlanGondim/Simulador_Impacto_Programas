@@ -140,8 +140,10 @@ else:
                 pdf = ExecutiveReport(row.to_dict()); pdf.add_page()
                 
                 pdf.section("1. INFORMAÇÕES GERAIS DO PROGRAMA")
-                m_pos = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100)
-                pdf.set_font("Arial", '', 10); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos: {m_pos:.2f}%", ln=True)
+                m_pos = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100) if row['receita'] > 0 else 0
+                pdf.set_font("Arial", 'B', 10); pdf.cell(190, 7, f"CATEGORIA(S) DO DESVIO: {row['categoria']}", ln=True)
+                pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 7, f"JUSTIFICATIVA TECNICA: {row['justificativa']}")
+                pdf.ln(5); pdf.cell(190, 7, f"Receita: {format_moeda(row['receita'])} | Margem Anterior: {row['margem_anterior']:.2f}% | Margem Pos: {m_pos:.2f}%", ln=True)
                 
                 pdf.ln(5); pdf.section("2. MODELAGEM DE CONFIANÇA (MONTE CARLO & PERT)")
                 txt_est = (f"Para este desvio, aplicamos 2.000 interações de Monte Carlo. "
@@ -156,6 +158,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
