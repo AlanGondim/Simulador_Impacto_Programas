@@ -83,7 +83,7 @@ if aba == "Nova Análise":
         func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
         seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
         vh = f3.number_input("Custo/Hora", value=150.0, step=5.0)
-        hrs = f4.number_input("Horas", min_value=0, step=5.0)
+        hrs = f4.number_input("Horas", min_value=0)
         if st.form_submit_button("➕ Adicionar Recurso"):
             conn.cursor().execute("INSERT INTO recursos_projeto (projeto, função, senioridade, custo_hora, horas, subtotal, data_registro) VALUES (?,?,?,?,?,?,?)",
                                    (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
@@ -158,6 +158,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
