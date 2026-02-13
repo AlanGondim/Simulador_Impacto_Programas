@@ -62,7 +62,7 @@ st.sidebar.title("🛡️ MV IMPACTO PRO")
 aba = st.sidebar.radio("Navegação", ["Nova Análise", "Hub de Inteligência"])
 
 if aba == "Nova Análise":
-    st.markdown("<h2 style='color: #003366;'>📊 1. DEFINIÇÃO DO PROGRAMA E DRE</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #003366;'>📊 1. INFORMAÇÕES DO PROGRAMA</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         nome_projeto = st.selectbox("Programa", [" ", "INS", "UNIMED SERRA GAUCHA","UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL","GUATEMALA", "GOOD HOPE", "EINSTEIN", "MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"])
@@ -73,7 +73,7 @@ if aba == "Nova Análise":
     
     justificativa = st.text_area("Justificativa Técnica do Desvio")
 
-    st.markdown("<h2 style='color: #003366;'>👥 2. ALOCAÇÃO E ENGENHARIA DE CUSTO</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #003366;'>👥 2. ALOCAÇÃO DE RECURSOS E CUSTOS</h2>", unsafe_allow_html=True)
     with st.form("form_rec"):
         f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
         func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
@@ -146,6 +146,7 @@ else:
                 pdf.multi_cell(190, 7, txt_prazo)
                 
                 st.download_button("Salvar Dossiê", bytes(pdf.output(dest='S')), f"DOSSIE_MV_{row['projeto']}.pdf")
+
 
 
 
