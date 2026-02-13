@@ -96,19 +96,54 @@ if aba == "Nova Análise":
 
     # 2. ALOCAÇÃO DE RECURSOS
     st.markdown("<h2 style='color: #003366;'>👥 2. ALOCAÇÃO DE RECURSOS</h2>", unsafe_allow_html=True)
-    with st.form("form_rec"):
-        f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
-        func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
-        seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
-        vh = f3.number_input("Custo/Hora", value=150.0)
-        hrs = f4.number_input("Horas", min_value=1)
-        if st.form_submit_button("➕ Adicionar Esforço"):
-            conn.cursor().execute("INSERT INTO recursos_projeto VALUES (NULL,?,?,?,?,?,?,?)", (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
-            conn.commit()
 
-    df_rec = pd.read_sql_query(f"SELECT função, senioridade, custo_hora, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
+   # Formulário de Adição
+    with st.expander("➕ Adicionar Novo Recurso", expanded=True):
+        with st.form("form_add_rec", clear_on_submit=True):
+            f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
+            func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
+            seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
+            vh = f3.number_input("Custo/Hora", value=150.0)
+            hrs = f4.number_input("Horas", min_value=1)
+            if st.form_submit_button("Confirmar Inclusão"):
+                conn.cursor().execute("INSERT INTO recursos_projeto VALUES (NULL,?,?,?,?,?,?,?)", (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
+                conn.commit()
+                st.rerun()
+
+    # Gestão de Recursos Existentes (Alterar/Excluir)
+    df_rec = pd.read_sql_query(f"SELECT id, função, senioridade, custo_hora, horas, subtotal FROM recursos_projeto WHERE projeto = '{nome_projeto}'", conn)
+    
     if not df_rec.empty:
-        st.table(df_rec.assign(custo_hora=df_rec['custo_hora'].apply(format_moeda), subtotal=df_rec['subtotal'].apply(format_moeda)))
+        st.markdown("### Recursos Alocados")
+        # Exibição formatada
+        df_show = df_rec.copy()
+        df_show['custo_hora'] = df_show['custo_hora'].apply(format_moeda)
+        df_show['subtotal'] = df_show['subtotal'].apply(format_moeda)
+        st.dataframe(df_show.drop(columns=['id']), use_container_width=True)
+
+        col_edit, col_del = st.columns(2)
+        with col_edit:
+            id_para_editar = st.selectbox("📝 Selecione um Recurso para AJUSTAR", df_rec['id'].tolist(), format_func=lambda x: f"ID {x} - {df_rec[df_rec['id']==x]['função'].values[0]}")
+            
+            with st.form("form_edit_rec"):
+                rec_sel = df_rec[df_rec['id'] == id_para_editar].iloc[0]
+                e1, e2, e3 = st.columns(3)
+                new_vh = e1.number_input("Novo Custo/Hora", value=float(rec_sel['custo_hora']))
+                new_hrs = e2.number_input("Novas Horas", value=int(rec_sel['horas']))
+                if st.form_submit_button("💾 Salvar Alterações"):
+                    conn.cursor().execute("UPDATE recursos_projeto SET custo_hora = ?, horas = ?, subtotal = ? WHERE id = ?", (new_vh, new_hrs, new_vh*new_hrs, id_para_editar))
+                    conn.commit()
+                    st.success("Recurso atualizado!")
+                    st.rerun()
+
+        with col_del:
+            id_para_excluir = st.selectbox("🗑️ Selecione um Recurso para EXCLUIR", df_rec['id'].tolist(), key="del_sel")
+            if st.button("❌ Remover Permanentemente", type="primary"):
+                conn.cursor().execute("DELETE FROM recursos_projeto WHERE id = ?", (id_para_excluir,))
+                conn.commit()
+                st.warning("Recurso removido!")
+                st.rerun()
+
         total_imp = df_rec['subtotal'].sum()
         total_hrs = int(df_rec['horas'].sum())
 
@@ -183,4 +218,5 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
