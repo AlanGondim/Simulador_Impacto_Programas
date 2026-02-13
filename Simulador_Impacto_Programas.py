@@ -103,7 +103,7 @@ if aba == "Nova Análise":
             f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
             func = f1.selectbox("Função", ["Gerente", "Analista", "Consultor", "Dev"])
             seni = f2.selectbox("Senioridade", ["Jr", "Pl", "Sr"])
-            vh = f3.number_input("Custo/Hora", value=150.0)
+            vh = f3.number_input("Custo/Hora", value=150.0, Step=5.0)
             hrs = f4.number_input("Horas", min_value=1)
             if st.form_submit_button("Confirmar Inclusão"):
                 conn.cursor().execute("INSERT INTO recursos_projeto VALUES (NULL,?,?,?,?,?,?,?)", (nome_projeto, func, seni, vh, hrs, vh*hrs, datetime.now().isoformat()))
@@ -218,6 +218,7 @@ else:
                 pdf.multi_cell(190, 7, f"Esforco alocado: {row['total_horas']} horas.\nDuracao esperada do impacto (PERT): {row['d_pert_resultado']:.1f} dias uteis.")
                 
                 st.download_button("Baixar Dossiê Executivo", bytes(pdf.output(dest='S')), f"PREMIUM_{row['projeto']}.pdf")
+
 
 
 
