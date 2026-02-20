@@ -87,10 +87,10 @@ if aba == "Nova Análise":
     with c1:
         progs = [" ", "INS", "UNIMED SERRA GAUCHA", "UNIMED NORTE FLUMINENSE", "CLINICA GIRASSOL", "GUATEMALA", "GOOD HOPE", "EINSTEIN","MOGI DAS CRUZES", "SESA/ES", "CEMA", "RHP", "SESI/RS"]
         nome_projeto = st.selectbox("1.1. Selecione o Programa", progs)
-        receita = st.number_input("1.2. Receita Líquida (R$)", value=0.0, step=1000.0)
+        receita = st.number_input("1.2. Receita Líquida (R$) Consulte na DRE", value=0.0, step=1000.0)
     with c2:
         gerente_nome = st.text_input("1.3. Gerente Responsável")
-        custos_at = st.number_input("1.4. Custos Totais ERP (R$)", value=0.0, step=1000.0)
+        custos_at = st.number_input("1.4. Custos Totais (R$) Consulte na DRE", value=0.0, step=1000.0)
     
     lista_categorias = [" ", "Go Live", "Retreinamento", "Especificações Funcionais", "Indisponibilidade de Infraestrutura", "Replanejamento", "Incompatibilidade de versão implantada"]
     cats = st.multiselect("1.5. Categoria(s) do Desvio", lista_categorias)
@@ -200,7 +200,7 @@ else:
             # Dados Financeiros Interativos
             m_pos_h = (((row['receita']-row['custos_atuais'])-row['impacto_financeiro'])/row['receita']*100) if row['receita'] > 0 else 0
             df_det = pd.DataFrame({
-                "KPI": ["Receita Líquida", "Custos Totais (ERP)", "Margem Atual", "Impacto Nominal", "Custo PERT (Risco)", "Teto MC P95", "Margem Final"],
+                "KPI": ["Receita Líquida", "Custos Totais ", "Margem Atual", "Impacto Nominal", "Custo PERT (Risco)", "Teto MC P95", "Margem Final"],
                 "Valor": [
                     format_moeda(row['receita']), 
                     format_moeda(row['custos_atuais']), 
@@ -238,7 +238,7 @@ else:
                 pdf.ln(2)
                 pdf.section("2. ANALISE FINANCEIRA E EROSAO")
                 pdf.cell(95, 7, f"Receita Liquida: {format_moeda(row['receita'])}", ln=0)
-                pdf.cell(95, 7, f"Custos Atuais (ERP): {format_moeda(row['custos_atuais'])}", ln=1)
+                pdf.cell(95, 7, f"Custos Atuais : {format_moeda(row['custos_atuais'])}", ln=1)
                 pdf.cell(95, 7, f"Margem Anterior: {row['margem_anterior']:.2f}%", ln=0)
                 pdf.cell(95, 7, f"Margem Pos-Impacto: {m_pos_h:.2f}%", ln=1)
                 pdf.cell(190, 7, f"Impacto Nominal Estimado: {format_moeda(row['impacto_financeiro'])}", ln=1)
@@ -263,6 +263,7 @@ else:
                 # Limpar arquivo temporário
                 if os.path.exists(grafico_path):
                     os.remove(grafico_path)
+
 
 
 
