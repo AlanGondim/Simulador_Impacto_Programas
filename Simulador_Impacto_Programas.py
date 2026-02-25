@@ -93,7 +93,7 @@ if aba == "Nova Análise":
         custos_at = st.number_input("1.4. Custos Totais (R$) Consulte na DRE", value=0.0, step=1000.0)
     
     lista_categorias = [" ", "Go Live", "Retreinamento", "Especificações Funcionais", "Indisponibilidade de Infraestrutura", "Replanejamento", "Incompatibilidade de versão implantada"]
-    cats = st.multiselect("1.5. Categoria(s) do Desvio", lista_categorias)
+    cats = st.multiselect("1.5. Categoria(s) do Impacto", lista_categorias)
     justificativa = st.text_area("1.6. Justificativa Técnica Detalhada")
 
     # 2. ALOCAÇÃO DE RECURSOS
@@ -263,6 +263,7 @@ else:
                 # Limpar arquivo temporário
                 if os.path.exists(grafico_path):
                     os.remove(grafico_path)
+
 
 
 
